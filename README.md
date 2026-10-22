@@ -2,7 +2,8 @@
 
 An interactive, browser-based tutor that walks a student through the full finite element solution of 2D and 3D pin-jointed truss problems, one stage at a time. Every matrix and number on screen is computed by the app's own JavaScript, and every stage shows how the numbers were produced.
 
-**Live tool:** `<paste your GitHub Pages link here>`
+**Live tool:** http://127.0.0.1:8765/index.html#stage-7
+
 
 ## Run it
 - Double-click `index.html` (works offline), or open the GitHub Pages link above.
