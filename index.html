@@ -1,0 +1,1499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FEM Truss Tutor</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1c2430; --muted:#5b6676; --line:#d5dae1;
+  --accent:#1f5fbf; --accent-ink:#ffffff; --free:#1f6fb2; --fixed:#c2571a;
+  --load:#b3261e; --member:#2b3442; --hl:#e0a800; --warn-bg:#fdecea; --warn-ink:#7a1912;
+  --ok:#1d7a46; --chip-bg:#eef1f5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161c; --panel:#1b212a; --ink:#e6eaf0; --muted:#a0abba; --line:#333c49;
+    --accent:#6aa3f0; --accent-ink:#0d1117; --free:#6cb3f2; --fixed:#f09a5a;
+    --load:#ff7b72; --member:#c9d3e0; --hl:#f2c94c; --warn-bg:#3b1a18; --warn-ink:#ffb4ab;
+    --ok:#5fd18f; --chip-bg:#262e3a;
+  }
+}
+*{box-sizing:border-box}
+html{font-size:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+header.top{background:var(--panel);border-bottom:1px solid var(--line);padding:.6rem 1rem;position:sticky;top:0;z-index:5}
+header.top h1{font-size:1.1rem;margin:0 0 .4rem;font-weight:650}
+.stepper{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center}
+.stepper button.step{border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:999px;padding:.25rem .7rem;font:inherit;font-size:.9375rem;cursor:pointer}
+.stepper button.step[aria-current="step"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:650}
+.progress{height:4px;background:var(--line);border-radius:2px;margin-top:.5rem;overflow:hidden}
+.progress>div{height:100%;background:var(--accent);transition:width .2s}
+.navbtns{margin-left:auto;display:flex;gap:.4rem}
+button.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:.3rem .8rem;font:inherit;cursor:pointer}
+button.btn:hover:not(:disabled){border-color:var(--accent)}
+button.btn:disabled{opacity:.45;cursor:default}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:1rem;padding:1rem;max-width:1600px;margin:0 auto}
+aside.side{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.9rem;align-self:start}
+aside.side h2,.card h2{font-size:1rem;margin:.2rem 0 .5rem}
+aside.side label{display:block;font-size:.9375rem;color:var(--muted);margin:.5rem 0 .15rem}
+select,input[type=number]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:.25rem .4rem;width:100%}
+input[aria-invalid="true"]{border-color:var(--load);background:var(--warn-bg)}
+.err{color:var(--load);font-size:.875rem;min-height:0}
+.rowfield{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.3rem}
+.elbox{border:1px solid var(--line);border-radius:6px;padding:.4rem .5rem;margin:.4rem 0}
+.elbox.hl,.hl-row{outline:2px solid var(--hl)}
+.elbox b{font-size:.9375rem}
+.work{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:1rem;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.9rem;min-width:0}
+.card svg{width:100%;max-width:640px;height:auto;display:block;margin:0 auto}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;font-size:.9375rem;margin:.3rem 0 .8rem}
+th,td{border:1px solid var(--line);padding:.2rem .55rem;text-align:right;white-space:nowrap}
+th{background:var(--chip-bg);font-weight:600}
+td.l,th.l{text-align:left}
+tr[data-el]:hover{background:var(--chip-bg)}
+.chip{display:inline-block;border-radius:999px;padding:0 .5rem;font-size:.875rem;border:1px solid currentColor}
+.chip.free{color:var(--free)} .chip.fixed{color:var(--fixed)}
+.banner{background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--load);border-radius:8px;padding:.7rem .9rem;margin-bottom:1rem}
+.counts{display:flex;gap:.6rem;flex-wrap:wrap;margin:.3rem 0 .8rem}
+.counts div{background:var(--chip-bg);border-radius:8px;padding:.3rem .7rem}
+.counts b{font-size:1.2rem}
+.what{border-left:4px solid var(--accent);padding:.1rem .8rem;margin:.2rem 0 .9rem;color:var(--ink)}
+.note{color:var(--muted);font-size:.9375rem}
+abbr[title]{text-decoration:underline dotted;cursor:help}
+.eq{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--chip-bg);padding:.4rem .6rem;border-radius:6px;margin:.4rem 0;overflow-x:auto}
+/* SVG */
+.member{stroke:var(--member);stroke-width:3;stroke-linecap:round}
+.member-hit{stroke:transparent;stroke-width:16}
+g.el.hl .member{stroke:var(--hl);stroke-width:5}
+.elnum circle{fill:var(--panel);stroke:var(--member);stroke-width:1.5}
+g.el.hl .elnum circle{stroke:var(--hl);stroke-width:3}
+.nodec{fill:var(--panel);stroke:var(--ink);stroke-width:2}
+svg text{fill:var(--ink);font:13px system-ui,sans-serif;text-anchor:middle;dominant-baseline:central}
+svg text.halo{paint-order:stroke;stroke:var(--panel);stroke-width:3px;stroke-linejoin:round}
+.loadc{stroke:var(--load);fill:var(--load)} text.loadt{fill:var(--load);font-weight:650}
+.dofc.free{stroke:var(--free);fill:var(--free)} .dofc.fixed{stroke:var(--fixed);fill:var(--fixed)}
+.dofc line{stroke-width:1.5} .dofc.fixed line{stroke-dasharray:4 3}
+text.doft.free{fill:var(--free)} text.doft.fixed{fill:var(--fixed)} text.doft{font-size:12px}
+.supp{stroke:var(--fixed);fill:none;stroke-width:2}
+.supp .fillc{fill:var(--panel)}
+.axes line{stroke:var(--muted);stroke-width:1.5}
+.axes polygon{fill:var(--muted)}
+@media (max-width:1023px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .work{grid-template-columns:minmax(0,1fr)}
+  .navbtns{margin-left:0}
+  header.top{position:static}
+}
+
+/* Phase 3 */
+button.btn.small{padding:.15rem .6rem;font-size:.9375rem}
+.viewbtns{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin:.2rem 0 .5rem}
+.svgwrap.rot{touch-action:none;cursor:grab;user-select:none}
+.svgwrap.rot.drag{cursor:grabbing}
+g.el.hl .member,g.el.sel .member{stroke:var(--hl)!important;stroke-width:5}
+g.el.sel .elnum circle{stroke:var(--hl);stroke-width:3}
+.member.faint{opacity:.25}
+.localax{stroke:var(--accent);fill:var(--accent)} .localax line{stroke-width:3}
+text.localt{fill:var(--accent);font-weight:700;font-size:16px}
+table.mat{border-collapse:separate;border-spacing:0;margin:.3rem 0}
+.mat td{border:none;text-align:right;padding:.15rem .5rem;min-width:4.2rem;font-variant-numeric:tabular-nums}
+.mat td.bl{border-left:2px solid var(--ink)} .mat td.br{border-right:2px solid var(--ink)}
+.mat th.dofh{background:none;border:none;color:var(--muted);font-weight:600}
+.mat th.free{color:var(--free)} .mat th.fixed{color:var(--fixed)}
+.mat td.zero{color:var(--muted)}
+.mat td.new{box-shadow:inset 0 0 0 2px var(--ink)}
+.tabs{display:flex;gap:.35rem;flex-wrap:wrap;margin:.3rem 0 .6rem}
+.tabs button{border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:6px;padding:.25rem .7rem;font:inherit;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:650}
+tr[data-sel]{cursor:pointer} tr.sel{outline:2px solid var(--hl)}
+.legend{display:flex;gap:.9rem;flex-wrap:wrap;margin:.4rem 0;font-size:.9375rem}
+.sw{display:inline-block;width:.9rem;height:.9rem;border-radius:3px;vertical-align:-2px;margin-right:.3rem}
+.sw.stripe{background:repeating-linear-gradient(45deg,#0072B2 0 3px,#D55E00 3px 6px)}
+.asmctl{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.5rem 0}
+#tip{position:fixed;z-index:20;background:var(--ink);color:var(--bg);padding:.45rem .65rem;border-radius:6px;font-size:.9375rem;pointer-events:none;max-width:28rem;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+#tip[hidden]{display:none}
+.tipsub{opacity:.75}
+.ok{color:var(--ok)} .bad{color:var(--load)}
+label.inline{display:inline-block;margin:.3rem 0}
+.katex-display{overflow-x:auto;overflow-y:hidden;margin:.5em 0}
+
+/* Phase 4 */
+:root{--tens:#1f6fb2;--comp:#c62828;--zero:#7d8794;--react:#1d7a46}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--tens:#6cb3f2;--comp:#ff7b72;--zero:#9aa5b4;--react:#5fd18f}}
+.svgwrap svg{overflow:visible}
+.member.ghost{stroke-dasharray:6 5;opacity:.35;stroke-width:2}
+.member.deformed{stroke:var(--accent);stroke-width:3.5}
+.defnode{fill:var(--accent);stroke:var(--panel);stroke-width:1.5}
+.reactc{stroke:var(--react);fill:var(--react)} text.reactt{fill:var(--react);font-weight:650}
+text.nlab{font-size:13px;font-weight:600}
+.mat td.cons{color:var(--muted);background:var(--chip-bg)}
+.mat td.gone{color:var(--muted);text-decoration:line-through;animation:fadeout .7s forwards}
+@keyframes fadeout{from{opacity:1}to{opacity:.18}}
+.mat td.augc{border-left:2px dashed var(--muted)}
+.mat td.rowhl{background:color-mix(in srgb,var(--hl) 22%,transparent)}
+.mat td.pivrow{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.mat td.pv{box-shadow:inset 0 0 0 2px var(--accent);font-weight:700}
+.stepline{background:var(--chip-bg);border-radius:6px;padding:.5rem .7rem}
+ol.steps{padding-left:1.3rem} ol.steps li{margin-bottom:.8rem}
+.badge{display:inline-block;border-radius:999px;padding:0 .6rem;font-size:.9375rem;border:2px solid currentColor;font-weight:600}
+.badge.tension{color:var(--tens)} .badge.compression{color:var(--comp)} .badge.zero{color:var(--zero);border-style:dotted}
+.summary{border:2px solid var(--accent);border-radius:8px;padding:.3rem 1rem;margin:1rem 0}
+.scalectl{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-top:.6rem}
+.scalectl input[type=range]{flex:1;min-width:8rem}
+details{margin:.2rem 0} summary{cursor:pointer}
+td.muted{color:var(--muted)}
+
+/* Phase 5 */
+:root[data-theme="dark"]{
+  --bg:#12161c;--panel:#1b212a;--ink:#e6eaf0;--muted:#a0abba;--line:#333c49;--accent:#6aa3f0;--accent-ink:#0d1117;
+  --free:#6cb3f2;--fixed:#f09a5a;--load:#ff7b72;--member:#c9d3e0;--hl:#f2c94c;--warn-bg:#3b1a18;--warn-ink:#ffb4ab;
+  --ok:#5fd18f;--chip-bg:#262e3a;--tens:#6cb3f2;--comp:#ff7b72;--zero:#9aa5b4;--react:#5fd18f}
+.skip{position:absolute;left:-999px;top:0;background:var(--accent);color:var(--accent-ink);padding:.4rem .8rem;z-index:50;border-radius:0 0 6px 0}
+.skip:focus{left:0}
+header.top .row{display:flex;gap:.6rem;align-items:baseline;flex-wrap:wrap;justify-content:space-between}
+.tools{display:flex;gap:.4rem;flex-wrap:wrap}
+abbr.gl{text-decoration:underline dotted;cursor:help;position:relative}
+abbr.gl:hover::after,abbr.gl:focus::after{content:attr(data-def);position:absolute;left:0;top:1.6em;z-index:30;width:max-content;max-width:min(22rem,80vw);
+  background:var(--ink);color:var(--bg);padding:.4rem .6rem;border-radius:6px;font-size:.9375rem;font-weight:400;line-height:1.4;text-align:left;white-space:normal;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+details.check{border:1px dashed var(--accent);border-radius:8px;padding:.4rem .8rem;margin:1rem 0}
+details.check summary{font-weight:650;color:var(--accent)}
+.answer{background:var(--chip-bg);border-radius:6px;padding:.4rem .7rem}
+.demo{background:var(--chip-bg);border:2px solid var(--accent);border-radius:8px;padding:.6rem .9rem;margin-bottom:1rem}
+dialog#help{max-width:44rem;width:92vw;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);padding:1rem 1.4rem}
+dialog#help::backdrop{background:rgba(0,0,0,.5)}
+dialog#help h2{margin-top:1rem}
+.err{font-size:.9375rem}.chip{font-size:.9375rem}
+svg text{font-size:15px}
+text.doft{font-size:15px} text.nlab{font-size:15px} text.localt{font-size:17px}
+#printview{display:none}
+@media print{
+  :root,:root:not([data-theme="light"]),:root[data-theme="dark"],:root[data-theme="light"]{
+    --bg:#fff;--panel:#fff;--ink:#000;--muted:#333;--line:#999;--accent:#1f5fbf;--accent-ink:#fff;--free:#1f6fb2;--fixed:#a8460f;
+    --load:#b3261e;--member:#222;--hl:#e0a800;--chip-bg:#eee;--tens:#1f6fb2;--comp:#c62828;--zero:#666;--react:#1d7a46;--ok:#1d7a46}
+  body>*:not(#printview){display:none!important}
+  #printview{display:block}
+  #printview section{page-break-before:always;break-before:page}
+  #printview section:first-of-type{page-break-before:auto;break-before:auto}
+  #printview table,#printview svg{break-inside:avoid}
+  #printview svg{max-width:420px;margin:0 auto}
+  #printview button,#printview .asmctl,#printview label.inline,#printview .tabs,#printview details.check,#printview .scalectl{display:none!important}
+  #printview .scroll{overflow:visible}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <div class="row"><h1>FEM Truss Tutor <span class="note" id="title-sub"></span></h1>
+  <div class="tools"><button class="btn small" id="demo-btn">Guided demo</button><button class="btn small" id="print-btn">Print / export</button>
+  <button class="btn small" id="help-btn">Help</button><button class="btn small" id="theme-btn" aria-label="Colour theme">Theme: Auto</button></div></div>
+  <nav class="stepper" id="stepper" aria-label="Stages"></nav>
+  <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+</header>
+<div class="layout">
+  <aside class="side" id="side" aria-label="Inputs"></aside>
+  <main>
+    <div id="banner"></div>
+    <div class="work">
+      <section class="card" id="diagram" aria-label="Structure diagram"></section>
+      <section class="card" id="content" tabindex="-1" aria-live="polite"></section>
+    </div>
+  </main>
+</div>
+
+<div id="printview" aria-hidden="true"></div>
+<dialog id="help" aria-labelledby="help-title">
+  <h1 id="help-title" style="font-size:1.3rem;margin:0">About this tool</h1>
+  <h2>The method</h2>
+  <p>The tool solves 2D and 3D pin-jointed trusses with the <b>direct stiffness method</b>, one stage at a time:</p>
+  <ol><li>Define the nodes, bars, supports and loads, and number the DOFs.</li><li>Compute each bar's length and direction cosines.</li>
+  <li>Build each bar's stiffness matrix: [k] = [T]ᵀ[k′][T].</li><li>Assemble all [k] into the global [K].</li>
+  <li>Apply the supports: delete constrained rows and columns to get [K<sub>ff</sub>]{u<sub>f</sub>} = {F<sub>f</sub>}.</li>
+  <li>Solve by Gaussian elimination to get displacements.</li><li>Recover reactions R = Ku − F, then strain, stress and force in each bar.</li></ol>
+  <h2>How to use it</h2>
+  <ul><li>Pick a <b>preset</b> in the sidebar. Edit E (GPa), A (mm²) and loads (kN); everything recomputes. Invalid values are rejected and the last valid one is kept.</li>
+  <li>Move between stages with the stepper, Previous/Next, or the ← → keys. The stage is in the URL (#stage-4).</li>
+  <li>In 3D, drag the diagram to rotate; use Reset view, Isometric, Front or Top.</li>
+  <li>Hover bars, table rows and matrix cells: related items highlight everywhere. In Stage 4, hover a cell of [K] to see where its value comes from.</li>
+  <li><b>Guided demo</b> loads the textbook problem (Logan Ex. 3.9) with prompts for each stage. <b>Print / export</b> makes a printable solution of all stages.</li></ul>
+  <h2>Units</h2><p>Calculations use SI base units (N, m, Pa). Displays use kN, mm, MPa, GPa and MN/m.</p>
+  <h2>Limits</h2><p>Straight pin-jointed bars only: no frames, bending, dynamics or nonlinear behaviour. Geometry and supports are fixed per preset. All math runs in your browser; nothing is sent anywhere.</p>
+  <p><button class="btn" id="help-close">Close</button></p>
+</dialog>
+<div id="tip" role="tooltip" hidden></div>
+<script>
+// BEGIN fem-core
+/* FEM core for the truss tutor: pure, deterministic, no DOM, no network.
+ * Browser: window.FEM.  Node: module.exports.
+ * Conventions: SI units (N, m, Pa). Matrices are 0-indexed arrays; every dofMap
+ * and every DOF number shown to users is 1-based (node i owns dim*(i-1)+1 .. dim*i).
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.FEM = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  // ------------------------------------------------------------------ PRESETS
+  const GPA = 1e9, MM2 = 1e-6, KN = 1e3;
+  const bars = (list, E, A) => list.map(([n1, n2], i) => ({ id: i + 1, n1, n2, E, A }));
+  const node = (id, x, y, z) => ({ id, x, y, z: z || 0 });
+  const pin2 = (n) => ({ node: n, fix: [true, true, false] });
+  const fix3 = (n) => ({ node: n, fix: [true, true, true] });
+
+  const PRESETS = [
+    {
+      id: "logan-3-9",
+      title: "Instructor test case (Logan Ex. 3.9)",
+      dim: 3,
+      description: "Space truss with three bars meeting at node 1, which carries a 20 kN load in +x. Nodes 2, 3 and 4 are pinned in x, y and z.",
+      nodes: [node(1, 12, -3, -4), node(2, 0, 0, 0), node(3, 12, -3, -7), node(4, 14, 6, 0)],
+      elements: bars([[1, 2], [1, 3], [1, 4]], 210 * GPA, 1000 * MM2),
+      supports: [fix3(2), fix3(3), fix3(4)],
+      loads: [{ node: 1, F: [20 * KN, 0, 0] }],
+    },
+    {
+      id: "2d-triangle",
+      title: "2D three-bar triangular truss",
+      dim: 2,
+      description: "Triangle with a pin at node 1 and a roller at node 2. Node 3 carries 10 kN in +x and 20 kN down.",
+      nodes: [node(1, 0, 0), node(2, 4, 0), node(3, 2, 3)],
+      elements: bars([[1, 2], [2, 3], [1, 3]], 200 * GPA, 1000 * MM2),
+      supports: [pin2(1), { node: 2, fix: [false, true, false] }],
+      loads: [{ node: 3, F: [10 * KN, -20 * KN, 0] }],
+    },
+    {
+      id: "2d-braced-panel",
+      title: "2D braced square panel",
+      dim: 2,
+      description: "Square panel with a diagonal. Pin at node 1, roller at node 2. Elements 1 and 4 turn out to be zero-force members.",
+      nodes: [node(1, 0, 0), node(2, 3, 0), node(3, 3, 3), node(4, 0, 3)],
+      elements: bars([[1, 2], [2, 3], [3, 4], [4, 1], [1, 3]], 200 * GPA, 1000 * MM2)
+        .map((e) => (e.id === 5 ? Object.assign(e, { A: 1500 * MM2 }) : e)),
+      supports: [pin2(1), { node: 2, fix: [false, true, false] }],
+      loads: [{ node: 4, F: [20 * KN, 0, 0] }, { node: 3, F: [0, -10 * KN, 0] }],
+    },
+    {
+      id: "3d-tripod",
+      title: "3D tripod",
+      dim: 3,
+      description: "Aluminum tripod: apex node 1 loaded by (10, 5, -30) kN, legs ending in ball joints at nodes 2, 3, 4. Statically determinate.",
+      nodes: [node(1, 0, 0, 4), node(2, 4, 0, 0), node(3, -2, 3, 0), node(4, -2, -3, 0)],
+      elements: bars([[1, 2], [1, 3], [1, 4]], 70 * GPA, 500 * MM2),
+      supports: [fix3(2), fix3(3), fix3(4)],
+      loads: [{ node: 1, F: [10 * KN, 5 * KN, -30 * KN] }],
+    },
+    {
+      id: "3d-pyramid",
+      title: "3D four-legged pyramid",
+      dim: 3,
+      description: "Four bars meet at the apex but there are only three equilibrium equations there, so the structure is statically indeterminate.",
+      nodes: [node(1, 0, 0, 3), node(2, 2, 2, 0), node(3, -2, 2, 0), node(4, -2, -2, 0), node(5, 2, -2, 0)],
+      elements: bars([[1, 2], [1, 3], [1, 4], [1, 5]], 200 * GPA, 1000 * MM2),
+      supports: [fix3(2), fix3(3), fix3(4), fix3(5)],
+      loads: [{ node: 1, F: [0, 10 * KN, -40 * KN] }],
+    },
+  ];
+  const DEFAULT_PRESET_ID = "logan-3-9";
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const getPreset = (id) => clone(PRESETS.find((p) => p.id === id));
+
+  // ------------------------------------------------------------------ helpers
+  const zeros = (r, c) => Array.from({ length: r }, () => new Array(c).fill(0));
+  const copyM = (M) => M.map((row) => row.slice());
+  const matMul = (A, B) => {
+    const C = zeros(A.length, B[0].length);
+    for (let i = 0; i < A.length; i++)
+      for (let k = 0; k < B.length; k++)
+        for (let j = 0; j < B[0].length; j++) C[i][j] += A[i][k] * B[k][j];
+    return C;
+  };
+  const transpose = (A) => A[0].map((_, j) => A.map((row) => row[j]));
+  const maxAbs = (M) => M.reduce((m, row) => row.reduce((a, v) => Math.max(a, Math.abs(v)), m), 0);
+
+  // ------------------------------------------------------------ element level
+  function elementData(model, el, nodeIdx) {
+    const dim = model.dim;
+    const ni = model.nodes[nodeIdx.get(el.n1)], nj = model.nodes[nodeIdx.get(el.n2)];
+    const dx = nj.x - ni.x, dy = nj.y - ni.y, dz = dim === 3 ? nj.z - ni.z : 0;
+    const L = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const cx = dx / L, cy = dy / L, cz = dz / L;
+    const EA = el.E * el.A, EAoverL = EA / L;
+    const kLocal = [[EAoverL, -EAoverL], [-EAoverL, EAoverL]];
+    const kUnit = [[1, -1], [-1, 1]]; // k' = (EA/L) * kUnit
+    const dir = dim === 3 ? [cx, cy, cz] : [cx, cy];
+    const T = [dir.concat(new Array(dim).fill(0)), new Array(dim).fill(0).concat(dir)];
+    const kLocalT = matMul(kLocal, T);          // k' T
+    const kTriple = matMul(transpose(T), kLocalT); // T^T k' T
+
+    // closed form: (EA/L) [[lam, -lam], [-lam, lam]]
+    const lam = zeros(dim, dim);
+    for (let a = 0; a < dim; a++) for (let b = 0; b < dim; b++) lam[a][b] = dir[a] * dir[b];
+    const kGlobal = zeros(2 * dim, 2 * dim);
+    for (let a = 0; a < dim; a++)
+      for (let b = 0; b < dim; b++) {
+        kGlobal[a][b] = EAoverL * lam[a][b];
+        kGlobal[a + dim][b + dim] = EAoverL * lam[a][b];
+        kGlobal[a][b + dim] = -EAoverL * lam[a][b];
+        kGlobal[a + dim][b] = -EAoverL * lam[a][b];
+      }
+    const scale = maxAbs(kGlobal) || 1;
+    let diff = 0;
+    for (let a = 0; a < 2 * dim; a++) for (let b = 0; b < 2 * dim; b++) diff = Math.max(diff, Math.abs(kGlobal[a][b] - kTriple[a][b]));
+    const selfCheck = { maxRelDiff: diff / scale, ok: diff / scale < 1e-9 };
+
+    const dofMap = [];
+    for (const n of [el.n1, el.n2]) for (let d = 0; d < dim; d++) dofMap.push(dim * nodeIdx.get(n) + d + 1);
+
+    return {
+      id: el.id, n1: el.n1, n2: el.n2, E: el.E, A: el.A,
+      dx, dy, dz, L, cx, cy, cz,
+      theta: dim === 2 ? Math.atan2(dy, dx) : null, // rad, CCW from +x
+      thetaDeg: dim === 2 ? (Math.atan2(dy, dx) * 180) / Math.PI : null,
+      EA, EAoverL,
+      lambda: lam,
+      lambdaProducts: { cx2: cx * cx, cxcy: cx * cy, cxcz: cx * cz, cy2: cy * cy, cycz: cy * cz, cz2: cz * cz },
+      kLocal, T, kLocalT, kTriple, kGlobal, selfCheck, dofMap,
+    };
+  }
+
+  // -------------------------------------------------------- Gaussian elimination
+  // Augmented-matrix elimination with partial pivoting; records every step.
+  // Returns { ok, x, steps, singular }.  Each step carries a snapshot of [A|b].
+  function gaussSolve(A, b, tol) {
+    const n = A.length;
+    const M = A.map((row, i) => row.concat([b[i]]));
+    const steps = [];
+    const snap = () => copyM(M);
+    steps.push({ type: "start", matrix: snap() });
+    for (let k = 0; k < n; k++) {
+      let p = k;
+      for (let i = k + 1; i < n; i++) if (Math.abs(M[i][k]) > Math.abs(M[p][k])) p = i;
+      const pivot = M[p][k];
+      if (Math.abs(pivot) < tol) {
+        steps.push({ type: "singular", col: k, pivot, matrix: snap() });
+        return { ok: false, x: null, steps, singular: { col: k, pivot, tol } };
+      }
+      if (p !== k) {
+        [M[p], M[k]] = [M[k], M[p]];
+        steps.push({ type: "swap", col: k, rowA: k, rowB: p, pivot: M[k][k], matrix: snap() });
+      } else {
+        steps.push({ type: "pivot", col: k, row: k, pivot, matrix: snap() });
+      }
+      for (let i = k + 1; i < n; i++) {
+        const m = M[i][k] / M[k][k];
+        if (m === 0) continue;
+        for (let j = k; j <= n; j++) M[i][j] -= m * M[k][j];
+        M[i][k] = 0;
+        steps.push({ type: "eliminate", col: k, row: i, pivotRow: k, multiplier: m, matrix: snap() });
+      }
+    }
+    const x = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+      let s = M[i][n], terms = [];
+      for (let j = i + 1; j < n; j++) { s -= M[i][j] * x[j]; terms.push({ j, coeff: M[i][j], xj: x[j] }); }
+      x[i] = s / M[i][i];
+      steps.push({ type: "back", row: i, diag: M[i][i], rhs: M[i][n], terms, value: x[i] });
+    }
+    return { ok: true, x, steps, singular: null };
+  }
+
+  // -------------------------------------------------------------------- solve
+  function solve(model) {
+    const dim = model.dim;
+    if (dim !== 2 && dim !== 3) throw new Error("model.dim must be 2 or 3");
+    const nN = model.nodes.length, nDof = nN * dim;
+    const nodeIdx = new Map(model.nodes.map((n, i) => [n.id, i]));
+    const elements = model.elements.map((e) => elementData(model, e, nodeIdx));
+
+    // assembly with per-entry contribution records
+    const K = zeros(nDof, nDof);
+    const contributions = Array.from({ length: nDof }, () => Array.from({ length: nDof }, () => []));
+    const assemblySteps = [];
+    for (const e of elements) {
+      const touched = [];
+      for (let a = 0; a < 2 * dim; a++)
+        for (let b = 0; b < 2 * dim; b++) {
+          const p = e.dofMap[a] - 1, q = e.dofMap[b] - 1, v = e.kGlobal[a][b];
+          K[p][q] += v;
+          contributions[p][q].push({ element: e.id, a: a + 1, b: b + 1, value: v });
+          touched.push([p + 1, q + 1]);
+        }
+      assemblySteps.push({ element: e.id, dofMap: e.dofMap.slice(), touched, K: copyM(K) });
+    }
+
+    // boundary conditions
+    const constrained = new Array(nDof).fill(false);
+    const constraintList = [];
+    const axis = ["x", "y", "z"];
+    for (const s of model.supports)
+      for (let d = 0; d < dim; d++)
+        if (s.fix[d]) {
+          const dof = dim * nodeIdx.get(s.node) + d;
+          if (!constrained[dof]) {
+            constrained[dof] = true;
+            constraintList.push({ dof: dof + 1, node: s.node, axis: axis[d] });
+          }
+        }
+    const F = new Array(nDof).fill(0);
+    for (const l of model.loads) for (let d = 0; d < dim; d++) F[dim * nodeIdx.get(l.node) + d] += l.F[d] || 0;
+    const freeDofs = [], fixedDofs = [];
+    for (let i = 0; i < nDof; i++) (constrained[i] ? fixedDofs : freeDofs).push(i + 1);
+
+    const Kff = freeDofs.map((r) => freeDofs.map((c) => K[r - 1][c - 1]));
+    const Ff = freeDofs.map((r) => F[r - 1]);
+    const maxDiag = K.reduce((m, row, i) => Math.max(m, Math.abs(row[i])), 0);
+    const pivotTol = 1e-12 * maxDiag;
+
+    const result = {
+      model, dim, nNodes: nN, nDof, elements, K, contributions, assemblySteps,
+      constrained, constraintList, freeDofs, fixedDofs, F, Kff, Ff, pivotTol,
+      counts: { total: nDof, constrained: fixedDofs.length, free: freeDofs.length },
+      elimination: null, u: null, R: null, reactionRows: null,
+      equilibrium: null, members: null, summary: null,
+      state: "ok", message: "",
+    };
+
+    if (freeDofs.length === 0) {
+      result.u = new Array(nDof).fill(0);
+    } else {
+      const g = gaussSolve(Kff, Ff, pivotTol);
+      result.elimination = g;
+      if (!g.ok) {
+        result.state = "singular";
+        result.message =
+          "The reduced stiffness matrix is singular: the supports do not prevent rigid-body motion or part of the structure is a mechanism, so the displacements cannot be determined. Add or move supports/bars.";
+        return result;
+      }
+      result.u = new Array(nDof).fill(0);
+      freeDofs.forEach((d, i) => (result.u[d - 1] = g.x[i]));
+    }
+    const u = result.u;
+
+    // reactions R = K u - F, row by row
+    const Ku = K.map((row) => row.reduce((s, v, j) => s + v * u[j], 0));
+    result.R = Ku.map((v, i) => v - F[i]);
+    result.reactionRows = fixedDofs.map((d) => ({
+      dof: d, Ku: Ku[d - 1], F: F[d - 1], R: result.R[d - 1],
+      terms: K[d - 1].map((v, j) => ({ j: j + 1, k: v, u: u[j] })).filter((t) => t.u !== 0 && t.k !== 0),
+    }));
+    for (let i = 0; i < nDof; i++) if (!constrained[i]) result.R[i] = 0; // free rows are ~0 by construction
+
+    // equilibrium
+    const eq = { sumF: [0, 0, 0], sumR: [0, 0, 0], total: [0, 0, 0] };
+    for (let i = 0; i < nDof; i++) { eq.sumF[i % dim] += F[i]; eq.sumR[i % dim] += result.R[i]; }
+    for (let d = 0; d < dim; d++) eq.total[d] = eq.sumF[d] + eq.sumR[d];
+    const fScale = Math.max(1, ...F.map(Math.abs));
+    eq.ok = eq.total.every((t) => Math.abs(t) < 1e-9 * fScale);
+    result.equilibrium = eq;
+
+    // strain / stress
+    const members = elements.map((e) => {
+      const d = e.dofMap.map((g) => u[g - 1]);
+      const dirv = dim === 3 ? [e.cx, e.cy, e.cz] : [e.cx, e.cy];
+      const delta = -dirv.reduce((s, c, i) => s + c * d[i], 0) + dirv.reduce((s, c, i) => s + c * d[dim + i], 0);
+      const strain = delta / e.L, stress = e.E * strain, N = stress * e.A;
+      return { id: e.id, d, delta, strain, stress, N };
+    });
+    const maxSigma = members.reduce((m, x) => Math.max(m, Math.abs(x.stress)), 0);
+    const tol = 1e-9 * maxSigma;
+    members.forEach((m) => (m.state = m.stress > tol ? "tension" : m.stress < -tol ? "compression" : "zero"));
+    result.members = members;
+
+    let maxDisp = { node: null, value: 0 };
+    model.nodes.forEach((n, i) => {
+      const mag = Math.hypot(...u.slice(i * dim, i * dim + dim));
+      if (mag > maxDisp.value) maxDisp = { node: n.id, value: mag };
+    });
+    const pick = (cmp) => members.reduce((b, m) => (b === null || cmp(m, b) ? m : b), null);
+    const maxT = pick((a, b) => a.stress > b.stress), maxC = pick((a, b) => a.stress < b.stress);
+    result.summary = {
+      maxDisp,
+      maxTension: maxT && maxT.stress > tol ? { element: maxT.id, stress: maxT.stress } : null,
+      maxCompression: maxC && maxC.stress < -tol ? { element: maxC.id, stress: maxC.stress } : null,
+    };
+    return result;
+  }
+
+  return { PRESETS, DEFAULT_PRESET_ID, getPreset, solve, gaussSolve, elementData };
+});
+// END fem-core
+</script>
+
+<script>
+"use strict";
+/* ============================================================== format */
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function fnum(v, sig = 4) {
+  if (!isFinite(v)) return "—";
+  if (v === 0) return "0";
+  const a = Math.abs(v);
+  if (a >= 1e6 || a < 1e-3) return v.toExponential(sig - 1).replace(/e\+?(-?)(\d+)/, " × 10<sup>$1$2</sup>");
+  return String(+v.toPrecision(sig));
+}
+function fix(v, d) { const t = v.toFixed(d); return /^-0\.?0*$/.test(t) ? t.slice(1) : t; }
+const toGPa = (E) => E / 1e9, toMM2 = (A) => A * 1e6, toKN = (F) => F / 1e3;
+const clean = (v) => +v.toPrecision(12);
+const mn = (v, zt = 0) => (Math.abs(v) <= zt ? "0" : fnum(v / 1e6, 4)); // N/m -> MN/m
+const AXES = ["x", "y", "z"];
+const SUBS = "₀₁₂₃₄₅₆₇₈₉", SUPS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const sub = (n) => String(n).replace(/\d/g, (d) => SUBS[d]);
+const sup = (n) => String(n).replace(/\d/g, (d) => SUPS[d]).replace("(", "⁽").replace(")", "⁾");
+
+const GLOSS = {
+  dof: "Degree of freedom: one independent displacement component of a node (for example horizontal movement of node 2).",
+  dircos: "Direction cosines: the components of the unit vector along the bar. They give the cosine of the angle between the bar and each axis.",
+  stiffness: "Stiffness: the force needed per unit displacement. A stiffer bar needs more force to stretch by the same amount.",
+  singular: "A singular matrix has no inverse, so the equations have no unique solution. For [k] this means the bar can move rigidly; for [K] it means the structure is not fully supported.",
+  pivot: "Pivot: the diagonal entry used to clear the entries below it during elimination.",
+  reaction: "Reaction: the force a support exerts on the structure to keep a constrained DOF from moving.",
+  tension: "Tension: the bar is being stretched (positive stress and force).",
+  compression: "Compression: the bar is being shortened (negative stress and force).",
+  equilibrium: "Equilibrium: the applied loads and the reactions balance, so their sum in every direction is zero.",
+};
+const gl = (text, key) => `<abbr class="gl" tabindex="0" data-def="${esc(GLOSS[key])}">${text}</abbr>`;
+function tex(s, display) {
+  if (window.katex) {
+    try { return katex.renderToString(s, { displayMode: !!display, throwOnError: false }); } catch (e) { /* fall through */ }
+  }
+  return `<code class="eq">${esc(s)}</code>`;
+}
+const bmat = (M, d) => "\\begin{bmatrix}" + M.map((r) => r.map((v) => fix(v, d)).join(" & ")).join(" \\\\ ") + "\\end{bmatrix}";
+
+/* ============================================================== stages */
+const STAGES = [
+  { name: "Problem", title: "Problem definition and visualization" },
+  { name: "Geometry", title: "Element geometry" },
+  { name: "Element k", title: "Element stiffness matrices" },
+  { name: "Assembly", title: "Global stiffness assembly" },
+  { name: "Boundary conditions", title: "Boundary conditions and reduced system" },
+  { name: "Displacements", title: "Solving for displacements" },
+  { name: "Reactions & stress", title: "Reactions, strains and stresses" },
+];
+const EL_COLORS = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9", "#8c6bb1", "#7f7f7f"];
+const elColor = (i) => EL_COLORS[i % EL_COLORS.length];
+
+/* ============================================================== render: diagram */
+const VIEWS = { reset: { yaw: 25, pitch: 30 }, iso: { yaw: 45, pitch: 35.264 }, front: { yaw: 0, pitch: 0 }, top: { yaw: 0, pitch: 90 } };
+function makeProjector(dim, view) {
+  if (dim === 2) return (x, y) => [x, y];
+  const a = (view.yaw * Math.PI) / 180, p = (view.pitch * Math.PI) / 180;
+  const cy = Math.cos(a), sy = Math.sin(a), cp = Math.cos(p), sp = Math.sin(p);
+  return (x, y, z) => {
+    const x1 = x * cy - y * sy, y1 = x * sy + y * cy;
+    return [x1, z * cp + y1 * sp];
+  };
+}
+function arrowSvg(tx, ty, dx, dy, len, cls, headLen = 9) {
+  const bx = tx - dx * len, by = ty - dy * len;
+  const hx = tx - dx * headLen, hy = ty - dy * headLen;
+  const nx = -dy * 4.5, ny = dx * 4.5;
+  return `<g class="${cls}"><line x1="${bx}" y1="${by}" x2="${hx}" y2="${hy}"/>` +
+    `<polygon points="${tx},${ty} ${hx + nx},${hy + ny} ${hx - nx},${hy - ny}" stroke="none"/></g>`;
+}
+function supportSvg2D(x, y, fix) {
+  if (fix[0] && fix[1]) {
+    return `<g class="supp"><polygon class="fillc" points="${x},${y + 11} ${x - 14},${y + 32} ${x + 14},${y + 32}"/>` +
+      `<line x1="${x - 20}" y1="${y + 32}" x2="${x + 20}" y2="${y + 32}"/>` +
+      [-16, -8, 0, 8, 16].map((o) => `<line x1="${x + o}" y1="${y + 32}" x2="${x + o - 6}" y2="${y + 39}"/>`).join("") + `</g>`;
+  }
+  const rot = fix[0] ? ' transform="rotate(90 ' + x + " " + y + ')"' : "";
+  return `<g class="supp"${rot}><polygon class="fillc" points="${x},${y + 11} ${x - 12},${y + 28} ${x + 12},${y + 28}"/>` +
+    `<circle class="fillc" cx="${x - 7}" cy="${y + 32}" r="4"/><circle class="fillc" cx="${x + 7}" cy="${y + 32}" r="4"/>` +
+    `<line x1="${x - 20}" y1="${y + 37}" x2="${x + 20}" y2="${y + 37}"/></g>`;
+}
+function supportSvg3D(x, y, fix) {
+  const all = fix[0] && fix[1] && fix[2];
+  const label = all ? "" : `<text class="doft fixed halo" x="${x}" y="${y + 36}">fixed ${AXES.filter((_, i) => fix[i]).join(",")}</text>`;
+  return `<g class="supp"><circle class="fillc" cx="${x}" cy="${y + 20}" r="9"/>` +
+    `<line x1="${x - 7}" y1="${y + 26}" x2="${x + 3}" y2="${y + 14}"/><line x1="${x - 2}" y1="${y + 28}" x2="${x + 7}" y2="${y + 18}"/></g>${label}`;
+}
+function renderDiagram(result, opts) {
+  const { model, dim } = result;
+  const W = 620, H = 470, pad = 95;
+  const proj = makeProjector(dim, opts.view);
+  const P = model.nodes.map((n) => proj(n.x, n.y, n.z));
+  let sc, uc, vc;
+  if (dim === 2) {
+    const us = P.map((p) => p[0]), vs = P.map((p) => p[1]);
+    const umin = Math.min(...us), umax = Math.max(...us), vmin = Math.min(...vs), vmax = Math.max(...vs);
+    const w = umax - umin, h = vmax - vmin;
+    const s = Math.min(w > 1e-9 ? (W - 2 * pad) / w : Infinity, h > 1e-9 ? (H - 2 * pad) / h : Infinity);
+    sc = isFinite(s) ? s : 40; uc = (umin + umax) / 2; vc = (vmin + vmax) / 2;
+  } else {
+    // rotation-independent fit: bounding sphere, so the drawing does not change size while rotating
+    const mid = ["x", "y", "z"].map((k) => (Math.min(...model.nodes.map((n) => n[k])) + Math.max(...model.nodes.map((n) => n[k]))) / 2);
+    const R = Math.max(1e-9, ...model.nodes.map((n) => Math.hypot(n.x - mid[0], n.y - mid[1], n.z - mid[2])));
+    sc = (Math.min(W, H) / 2 - pad) / R;
+    [uc, vc] = proj(mid[0], mid[1], mid[2]);
+  }
+  const pt = P.map((p) => [W / 2 + sc * (p[0] - uc), H / 2 - sc * (p[1] - vc)]);
+  const idx = new Map(model.nodes.map((n, i) => [n.id, i]));
+  // unit screen direction of each model axis, or null when it points (almost) into the screen
+  const axisDir = AXES.slice(0, dim).map((_, a) => {
+    const v = [0, 0, 0]; v[a] = 1;
+    const [du, dv] = proj(...v);
+    const L = Math.hypot(du, dv);
+    return L < 0.12 ? null : [du / L, -dv / L];
+  });
+  const col = opts.colorByElement;
+  const U = opts.deform ? result.u : null;
+  const ptd = U ? model.nodes.map((n, i) => {
+    const q = proj(n.x + opts.deform.scale * U[dim * i], n.y + opts.deform.scale * U[dim * i + 1], n.z + (dim === 3 ? opts.deform.scale * U[dim * i + 2] : 0));
+    return [W / 2 + sc * (q[0] - uc), H / 2 - sc * (q[1] - vc)];
+  }) : null;
+  const memberById = new Map((result.members || []).map((m) => [m.id, m]));
+  const maxN = Math.max(1e-30, ...(result.members || []).map((m) => Math.abs(m.N)));
+
+  let out = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(model.title)}: ${model.nodes.length} nodes, ${model.elements.length} bars, ${dim}D truss diagram"><title>${esc(model.title)}</title>`;
+  for (const e of result.elements) {
+    const a = pt[idx.get(e.n1)], b = pt[idx.get(e.n2)];
+    const c = col ? col[e.id] : null;
+    let style = c ? ` style="stroke:${c}"` : "";
+    const mem = memberById.get(e.id);
+    if (opts.memberState && mem) {
+      const w = 3 + 8 * (Math.abs(mem.N) / maxN);
+      const dash = mem.state === "compression" ? "10 6" : mem.state === "zero" ? "2 6" : "none";
+      style = ` style="stroke:var(--${mem.state === "tension" ? "tens" : mem.state === "compression" ? "comp" : "zero"});stroke-width:${w}px;stroke-dasharray:${dash}"`;
+    }
+    out += `<g class="el${opts.sel === e.id ? " sel" : ""}" data-el="${e.id}"><line class="member-hit" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/>` +
+      `<line class="member${col && !c ? " faint" : ""}${U ? " ghost" : ""}"${style} x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/></g>`;
+    if (U) {
+      const da = ptd[idx.get(e.n1)], db = ptd[idx.get(e.n2)];
+      out += `<line class="member deformed" x1="${da[0]}" y1="${da[1]}" x2="${db[0]}" y2="${db[1]}"/>`;
+    }
+  }
+  for (const sp of model.supports) {
+    const [x, y] = pt[idx.get(sp.node)];
+    out += dim === 2 ? supportSvg2D(x, y, sp.fix) : supportSvg3D(x, y, sp.fix);
+  }
+  if (opts.showDofs) {
+    model.nodes.forEach((n, i) => {
+      for (let a = 0; a < dim; a++) {
+        if (!axisDir[a]) continue;
+        const dof = dim * i + a + 1;
+        const st = result.constrained[dof - 1] ? "fixed" : "free";
+        const [dx, dy] = axisDir[a];
+        const clash = model.loads.some((l) => l.node === n.id && l.F[a] < 0);
+        const sx = clash ? -dy * 11 : 0, sy = clash ? dx * 11 : 0;
+        const tx = pt[i][0] + dx * 38 + sx, ty = pt[i][1] + dy * 38 + sy;
+        out += arrowSvg(tx, ty, dx, dy, 24, `dofc ${st}`, 7);
+        out += `<text class="doft ${st} halo" x="${tx + dx * 13 + sx * 0.8}" y="${ty + dy * 13 + sy * 0.8}">d${dof}</text>`;
+      }
+    });
+  }
+  for (const l of model.loads) {
+    const i = idx.get(l.node);
+    for (let a = 0; a < dim; a++) {
+      const f = l.F[a];
+      if (!f || !axisDir[a]) continue;
+      const sg = Math.sign(f);
+      const dx = axisDir[a][0] * sg, dy = axisDir[a][1] * sg;
+      const tx = pt[i][0] - dx * 14, ty = pt[i][1] - dy * 14;
+      out += arrowSvg(tx, ty, dx, dy, 52, "loadc", 10);
+      const lx = Math.min(W - 40, Math.max(40, tx - dx * 66)), ly = Math.min(H - 14, Math.max(14, ty - dy * 66));
+      out += `<text class="loadt halo" x="${lx}" y="${ly}">${fnum(toKN(f), 4)} kN</text>`;
+    }
+  }
+  if (ptd) ptd.forEach((p) => { out += `<circle class="defnode" cx="${p[0]}" cy="${p[1]}" r="5"/>`; });
+  if (opts.reactions && result.R) {
+    const rt = 1e-9 * Math.max(0, ...result.R.map(Math.abs));
+    model.nodes.forEach((n, i) => {
+      for (let a = 0; a < dim; a++) {
+        const dof = dim * i + a, f = result.R[dof];
+        if (!result.constrained[dof] || Math.abs(f) <= rt || !axisDir[a]) continue;
+        const sg = Math.sign(f), dx = axisDir[a][0] * sg, dy = axisDir[a][1] * sg;
+        const tx = pt[i][0] - dx * 14, ty = pt[i][1] - dy * 14;
+        out += arrowSvg(tx, ty, dx, dy, 46, "reactc", 10);
+        const lx = Math.min(W - 40, Math.max(40, tx - dx * 62)), ly = Math.min(H - 14, Math.max(14, ty - dy * 62));
+        out += `<text class="reactt halo" x="${lx}" y="${ly}">${+(f / 1e3).toPrecision(4)} kN</text>`;
+      }
+    });
+  }
+  model.nodes.forEach((n, i) => {
+    out += `<circle class="nodec" cx="${pt[i][0]}" cy="${pt[i][1]}" r="11"/><text x="${pt[i][0]}" y="${pt[i][1]}">${n.id}</text>`;
+  });
+  for (const e of result.elements) {
+    const a = pt[idx.get(e.n1)], b = pt[idx.get(e.n2)];
+    out += `<g class="el${opts.sel === e.id ? " sel" : ""}" data-el="${e.id}"><g class="elnum"><circle cx="${(a[0] + b[0]) / 2}" cy="${(a[1] + b[1]) / 2}" r="12"/>` +
+      `<text x="${(a[0] + b[0]) / 2}" y="${(a[1] + b[1]) / 2}" style="font-size:15px">${e.id}</text></g></g>`;
+    const mem = memberById.get(e.id);
+    if (opts.memberState && mem) {
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L;
+      out += `<text class="nlab halo" x="${(a[0] + b[0]) / 2 + nx * (18 + 32 * Math.abs(nx))}" y="${(a[1] + b[1]) / 2 + ny * (18 + 6 * Math.abs(ny))}">${mem.state === "zero" ? "0" : +(mem.N / 1e3).toPrecision(4)} kN</text>`;
+    }
+  }
+  // local x' axis of the selected element (Stage 2)
+  if (opts.localAxis) {
+    const e = result.elements.find((q) => q.id === opts.localAxis);
+    const a = pt[idx.get(e.n1)], b = pt[idx.get(e.n2)];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (len > 70) {
+      const dx = (b[0] - a[0]) / len, dy = (b[1] - a[1]) / len;
+      const l = Math.min(70, len * 0.4), tx = a[0] + dx * (18 + l), ty = a[1] + dy * (18 + l);
+      out += arrowSvg(tx, ty, dx, dy, l, "localax", 11);
+      out += `<text class="localt halo" x="${tx + dx * 4 - dy * 14}" y="${ty + dy * 4 + dx * 14}">x′</text>`;
+    }
+  }
+  out += `<g class="axes">`;
+  AXES.slice(0, dim).forEach((ax, a) => {
+    if (!axisDir[a]) return;
+    const [dx, dy] = axisDir[a];
+    const x0 = 40, y0 = H - 30;
+    out += `<line x1="${x0}" y1="${y0}" x2="${x0 + dx * 32}" y2="${y0 + dy * 32}"/>` +
+      `<polygon points="${x0 + dx * 36},${y0 + dy * 36} ${x0 + dx * 28 - dy * 4},${y0 + dy * 28 + dx * 4} ${x0 + dx * 28 + dy * 4},${y0 + dy * 28 - dx * 4}"/>` +
+      `<text x="${x0 + dx * 47}" y="${y0 + dy * 47}">${ax}</text>`;
+  });
+  return out + `</g></svg>`;
+}
+
+/* ============================================================== render: matrices */
+const CSV = {};
+// rowH / colH: [{label, cls, title}] ; cell(i,j) -> {t, cls, style, attrs}
+function matrixTable(rowH, colH, cell) {
+  const hd = (c, tag) => `<th class="dofh ${c.cls || ""}" title="${esc(c.title || "")}">${c.label}</th>`;
+  let h = `<div class="scroll"><table class="mat"><tr><th class="dofh"></th>${colH.map(hd).join("")}</tr>`;
+  rowH.forEach((rh, i) => {
+    h += `<tr>${hd(rh)}`;
+    colH.forEach((_, j) => {
+      const c = cell(i, j);
+      const edge = (j === 0 ? " bl" : "") + (j === colH.length - 1 ? " br" : "");
+      h += `<td class="${(c.cls || "") + edge}"${c.style ? ` style="${c.style}"` : ""}${c.attrs || ""}>${c.t}</td>`;
+    });
+    h += "</tr>";
+  });
+  return h + "</table></div>";
+}
+function csvBtn(key, rowLabels, colLabels, M, unit) {
+  CSV[key] = { rowLabels, colLabels, M, unit };
+  return `<button class="btn small" data-copy="${key}">Copy as CSV</button>`;
+}
+function copyCSV(key, btn) {
+  const c = CSV[key];
+  if (!c) return;
+  const lines = [[""].concat(c.colLabels).join(",")].concat(c.M.map((row, i) => [c.rowLabels[i]].concat(row.map((v) => v / c.unit)).join(",")));
+  const text = lines.join("\n");
+  const done = () => { const o = btn.textContent; btn.textContent = "Copied ✓"; setTimeout(() => (btn.textContent = o), 1200); };
+  const fallback = () => {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { /* ignore */ } ta.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+}
+function dofLabel(dof) {
+  const dim = S.result.dim;
+  if (S.presetId === "logan-3-9") return `d${S.model.nodes[Math.floor((dof - 1) / dim)].id}${AXES[(dof - 1) % dim]}`;
+  return "d" + dof;
+}
+function dofHead(dof) {
+  const fixed = S.result.constrained[dof - 1];
+  return { label: dofLabel(dof), cls: fixed ? "fixed" : "free", title: `global DOF ${dof} (${fixed ? "constrained" : "free"})` };
+}
+
+/* ============================================================== render: stages */
+function renderStage1(r) {
+  const m = r.model, dim = r.dim;
+  const axes = AXES.slice(0, dim);
+  const c = r.counts;
+  let h = `<div class="what"><p>The structure is described by <b>nodes</b>, <b>bars</b> joining them, <b>supports</b> that remove some motions and <b>loads</b>. ` +
+    `Each node has ${dim} ${gl("degrees of freedom (DOF)", "dof")}, so ${r.nNodes} nodes give ${c.total} DOFs. ` +
+    `Supports constrain ${c.constrained} of them, leaving ${c.free} unknown displacements to solve for.</p></div>`;
+  h += `<p>${esc(m.description)}</p>`;
+  h += `<p class="eq">node i owns DOFs ${dim === 2 ? "2i−1, 2i" : "3i−2, 3i−1, 3i"} &nbsp; (${axes.map((a) => "u" + a).join(", ")})</p>`;
+  h += `<div class="counts"><div>total DOFs <b>${c.total}</b></div><div>constrained <b>${c.constrained}</b></div><div>free <b>${c.free}</b></div></div>`;
+  h += `<h2>Nodes</h2><div class="scroll"><table><tr><th>Node</th>${axes.map((a) => `<th>${a} (m)</th>`).join("")}</tr>` +
+    m.nodes.map((n) => `<tr><td>${n.id}</td>${axes.map((a) => `<td>${fnum(n[a])}</td>`).join("")}</tr>`).join("") + `</table></div>`;
+  h += `<h2>Elements</h2><div class="scroll"><table><tr><th>Element</th><th>Node i</th><th>Node j</th><th>E (GPa)</th><th>A (mm²)</th></tr>` +
+    m.elements.map((e) => `<tr data-el="${e.id}"><td>${e.id}</td><td>${e.n1}</td><td>${e.n2}</td><td>${fnum(toGPa(e.E))}</td><td>${fnum(toMM2(e.A))}</td></tr>`).join("") + `</table></div>`;
+  h += `<h2>Supports</h2><div class="scroll"><table><tr><th>Node</th><th class="l">Constrained</th><th class="l">Type</th></tr>` +
+    m.supports.map((s) => {
+      const f = s.fix.slice(0, dim);
+      const names = axes.filter((_, i) => f[i]).map((a) => "u" + a + " = 0").join(", ") || "none";
+      const type = f.every(Boolean) ? (dim === 2 ? "pin" : "ball joint") : "roller / partial";
+      return `<tr><td>${s.node}</td><td class="l">${names}</td><td class="l">${type}</td></tr>`;
+    }).join("") + `</table></div>`;
+  h += `<h2>Loads</h2><div class="scroll"><table><tr><th>Node</th>${axes.map((a) => `<th>F${a} (kN)</th>`).join("")}</tr>` +
+    m.loads.map((l) => `<tr><td>${l.node}</td>${axes.map((_, i) => `<td>${fnum(toKN(l.F[i]))}</td>`).join("")}</tr>`).join("") + `</table></div>`;
+  h += `<h2>DOF numbering</h2><div class="scroll"><table><tr><th>Node</th>${axes.map((a) => `<th>${a}</th>`).join("")}</tr>` +
+    m.nodes.map((n, i) => `<tr><td>${n.id}</td>${axes.map((_, a) => {
+      const d = dim * i + a + 1, fixed = r.constrained[d - 1];
+      return `<td>d${d} <span class="chip ${fixed ? "fixed" : "free"}">${fixed ? "🔒 fixed" : "free"}</span></td>`;
+    }).join("")}</tr>`).join("") + `</table></div>`;
+  return h;
+}
+
+function renderStage2(r) {
+  const dim = r.dim, axes = AXES.slice(0, dim);
+  let h = `<div class="what"><p>Each bar is described by its two end nodes. From their coordinates we get the length <i>L</i> and the <b>${gl("direction cosines", "dircos")}</b> ` +
+    `(the components of the unit vector along the bar). These tell us how the bar is oriented, which is all we need to turn its 1D stiffness into global coordinates. ` +
+    `Click a row to see the bar's local x′ axis (it points from node i to node j).</p></div>`;
+  h += `<div>${tex(dim === 3 ? "L=\\sqrt{(x_j-x_i)^2+(y_j-y_i)^2+(z_j-z_i)^2}" : "L=\\sqrt{(x_j-x_i)^2+(y_j-y_i)^2}", true)}` +
+    tex(dim === 3 ? "C_x=\\frac{x_j-x_i}{L},\\quad C_y=\\frac{y_j-y_i}{L},\\quad C_z=\\frac{z_j-z_i}{L}" : "c=\\cos\\theta=C_x=\\frac{x_j-x_i}{L},\\quad s=\\sin\\theta=C_y=\\frac{y_j-y_i}{L}", true) + `</div>`;
+  const rowAttr = (e) => `data-el="${e.id}" data-sel="${e.id}" class="${S.selEl === e.id ? "sel" : ""}"`;
+  h += `<h2>Geometry and direction cosines</h2><div class="scroll"><table><tr><th>Element</th><th>i→j</th>${axes.map((a) => `<th>Δ${a} (m)</th>`).join("")}<th>L (m)</th>` +
+    (dim === 2 ? "<th>θ (°)</th>" : "") + `<th>C<sub>x</sub></th><th>C<sub>y</sub></th>` + (dim === 3 ? "<th>C<sub>z</sub></th>" : "") + `<th>EA/L (MN/m)</th></tr>` +
+    r.elements.map((e) => `<tr ${rowAttr(e)}><td>${e.id}</td><td>${e.n1}→${e.n2}</td>` +
+      [e.dx, e.dy, e.dz].slice(0, dim).map((v) => `<td>${fix(v, 3)}</td>`).join("") + `<td>${fix(e.L, 4)}</td>` +
+      (dim === 2 ? `<td>${fix(e.thetaDeg, 2)}</td>` : "") +
+      [e.cx, e.cy, e.cz].slice(0, dim).map((v) => `<td>${fix(v, 4)}</td>`).join("") + `<td>${mn(e.EAoverL)}</td></tr>`).join("") + `</table></div>`;
+  const names = dim === 3 ? ["C<sub>x</sub>²", "C<sub>x</sub>C<sub>y</sub>", "C<sub>x</sub>C<sub>z</sub>", "C<sub>y</sub>²", "C<sub>y</sub>C<sub>z</sub>", "C<sub>z</sub>²"] : ["c²", "cs", "s²"];
+  h += `<h2>Products used in [k]</h2><div class="scroll"><table><tr><th>Element</th>${names.map((n) => `<th>${n}</th>`).join("")}</tr>` +
+    r.elements.map((e) => {
+      const p = e.lambdaProducts;
+      const vals = dim === 3 ? [p.cx2, p.cxcy, p.cxcz, p.cy2, p.cycz, p.cz2] : [p.cx2, p.cxcy, p.cy2];
+      return `<tr ${rowAttr(e)}><td>${e.id}</td>${vals.map((v) => `<td>${fix(v, 4)}</td>`).join("")}</tr>`;
+    }).join("") + `</table></div>`;
+  h += `<p class="note">Check: for every bar C<sub>x</sub>² + C<sub>y</sub>²${dim === 3 ? " + C<sub>z</sub>²" : ""} = 1.</p>`;
+  return h;
+}
+
+function renderStage3(r) {
+  const dim = r.dim, n2 = 2 * dim;
+  const e = r.elements.find((q) => q.id === S.selEl) || r.elements[0];
+  const heads = e.dofMap.map(dofHead);
+  let h = `<div class="what"><p>A bar only carries force along its own axis, so its ${gl("stiffness", "stiffness")} is easy in <b>local</b> coordinates: [k′]. ` +
+    `The transformation matrix [T] rotates the global displacements onto the bar axis, and [k] = [T]ᵀ[k′][T] puts the stiffness back into global coordinates. ` +
+    `Rows and columns are labelled with this element's global DOFs.</p></div>`;
+  h += `<div class="tabs" role="tablist">${r.elements.map((q) => `<button role="tab" aria-selected="${q.id === e.id}" data-sel="${q.id}" data-el="${q.id}" style="border-left:6px solid ${elColor(q.id - 1)}">Element ${q.id}</button>`).join("")}</div>`;
+  h += `<p>Element ${e.id}: node ${e.n1} → node ${e.n2}, L = ${fix(e.L, 4)} m, EA/L = ${mn(e.EAoverL)} MN/m, global DOFs [${e.dofMap.map(dofLabel).join(", ")}].</p>`;
+
+  h += `<h2>1. Local stiffness [k′]</h2>` + tex("[k']=\\frac{EA}{L}\\begin{bmatrix}1&-1\\\\-1&1\\end{bmatrix}", true);
+  h += matrixTable([{ label: "i" }, { label: "j" }], [{ label: "i" }, { label: "j" }], (i, j) => ({ t: mn(e.kLocal[i][j]) })) +
+    `<p class="note">Values in MN/m (× 10⁶ N/m).</p>`;
+
+  h += `<h2>2. Transformation [T]</h2>`;
+  h += tex(dim === 2 ? "[T]=\\begin{bmatrix}c&s&0&0\\\\0&0&c&s\\end{bmatrix}" : "[T]=\\begin{bmatrix}C_x&C_y&C_z&0&0&0\\\\0&0&0&C_x&C_y&C_z\\end{bmatrix}", true);
+  h += tex("[T]=" + bmat(e.T, 4), true);
+
+  h += `<h2>3. The product [T]ᵀ[k′][T]</h2>`;
+  h += `<p>First [k′][T] (2 × ${n2}):</p>` +
+    matrixTable([{ label: "i" }, { label: "j" }], heads, (i, j) => ({ t: mn(e.kLocalT[i][j]) }));
+  h += `<p>Then [k] = [T]ᵀ ([k′][T]) (${n2} × ${n2}), entry (a, b) = Σ<sub>m</sub> T<sub>m a</sub> ([k′][T])<sub>m b</sub>:</p>`;
+  const zt = 1e-12 * e.EAoverL;
+  h += matrixTable(heads, heads, (i, j) => ({ t: mn(e.kGlobal[i][j], zt), cls: Math.abs(e.kGlobal[i][j]) <= zt ? "zero" : "" }));
+  h += `<p class="note">Values in MN/m. ` + csvBtn("k" + e.id, heads.map((q) => q.label), heads.map((q) => q.label), e.kGlobal, 1e6) + `</p>`;
+
+  h += `<h2>4. Closed form</h2>`;
+  if (S.symbolic) {
+    h += dim === 2
+      ? tex("[k]=\\frac{EA}{L}\\begin{bmatrix}c^2&cs&-c^2&-cs\\\\cs&s^2&-cs&-s^2\\\\-c^2&-cs&c^2&cs\\\\-cs&-s^2&cs&s^2\\end{bmatrix}", true)
+      : tex("[k]=\\frac{EA}{L}\\begin{bmatrix}[\\lambda]&-[\\lambda]\\\\-[\\lambda]&[\\lambda]\\end{bmatrix},\\quad [\\lambda]=\\begin{bmatrix}C_x^2&C_xC_y&C_xC_z\\\\C_xC_y&C_y^2&C_yC_z\\\\C_xC_z&C_yC_z&C_z^2\\end{bmatrix}", true);
+  }
+  h += `<label class="inline"><input type="checkbox" id="symbolic"${S.symbolic ? " checked" : ""}> Show symbolic form</label>`;
+  if (dim === 3) {
+    h += `<p>Numeric [λ] for this element:</p>` +
+      matrixTable([{ label: "x" }, { label: "y" }, { label: "z" }], [{ label: "x" }, { label: "y" }, { label: "z" }], (i, j) => ({ t: fix(e.lambda[i][j], 4) }));
+  } else if (S.symbolic) {
+    h += `<p>c = cos θ = ${fix(e.cx, 4)}, s = sin θ = ${fix(e.cy, 4)} (θ = ${fix(e.thetaDeg, 2)}°).</p>`;
+  }
+  h += `<p class="${e.selfCheck.ok ? "ok" : "bad"}">${e.selfCheck.ok ? "✓" : "✗"} Self-check: closed form equals [T]ᵀ[k′][T] (max relative difference ${e.selfCheck.maxRelDiff.toExponential(1)}).</p>`;
+
+  const rowSums = e.kGlobal.map((row) => { const s = row.reduce((a, b) => a + b, 0); return Math.abs(s) <= zt ? 0 : s; });
+  h += `<h2>Why is [k] symmetric and singular?</h2><p class="note">Symmetric because the work done by force <i>a</i> through displacement <i>b</i> equals the reverse (k<sub>ab</sub> = k<sub>ba</sub>). ` +
+    `${gl("Singular", "singular")} because the bar alone is not supported: moving it as a rigid body (all DOFs the same) stretches nothing and produces no force, so every row sums to zero ` +
+    `(here: ${rowSums.map((s) => mn(s)).join(", ")}). It only becomes solvable after the supports are applied.</p>`;
+  return h;
+}
+
+function asmContrib(r, p, q, upto) { // contributions to K(p,q) from the first `upto` elements
+  return r.contributions[p - 1][q - 1].filter((c) => c.element <= upto); // element ids are 1..n in order
+}
+function renderStage4(r) {
+  const n = r.nDof, ne = r.elements.length, a = S.asm;
+  const lab = Array.from({ length: n }, (_, i) => i + 1);
+  const maxK = r.K.reduce((m, row) => row.reduce((x, v) => Math.max(x, Math.abs(v)), m), 0), zt = 1e-12 * maxK;
+  let h = `<div class="what"><p>The global stiffness matrix [K] is built by <b>direct assembly</b>: each element adds its small matrix into the rows and columns of its own global DOFs. ` +
+    `Where several elements share a DOF, their contributions add up. Step through the elements, and hover over any cell to see where its value comes from.</p></div>`;
+  h += tex("K_{pq}\\mathrel{+}=k^{(e)}_{ab},\\quad p=\\mathrm{map}_e(a),\\; q=\\mathrm{map}_e(b)", true);
+  h += `<div class="asmctl"><button class="btn" id="asm-next"${a >= ne ? " disabled" : ""}>Add element ${Math.min(a + 1, ne)}</button> ` +
+    `<button class="btn" id="asm-all"${a >= ne ? " disabled" : ""}>Add all</button> <button class="btn" id="asm-reset"${a === 0 ? " disabled" : ""}>Reset</button> ` +
+    `<span class="note">${a} of ${ne} elements added</span></div>`;
+  h += `<div class="legend">` + r.elements.map((e, i) => `<span data-el="${e.id}"><i class="sw" style="background:${elColor(i)}"></i>Element ${e.id}${i < a ? "" : " (not yet)"}</span>`).join("") +
+    `<span><i class="sw stripe"></i>striped = several elements add here</span></div>`;
+  if (a > 0) {
+    const e = r.elements[a - 1];
+    h += `<p>Element ${e.id} maps its local DOFs 1…${2 * r.dim} to global DOFs [${e.dofMap.join(", ")}].</p>`;
+  }
+  const heads = lab.map(dofHead);
+  h += matrixTable(heads, heads, (i, j) => {
+    const p = i + 1, q = j + 1;
+    const cs = asmContrib(r, p, q, a);
+    const els = cs.map((c) => c.element);
+    const sum = cs.reduce((s, c) => s + c.value, 0);
+    let style = "", cls = "";
+    if (cs.length === 1) style = `background:${elColor(els[0] - 1)}33;`;
+    else if (cs.length > 1) {
+      const stops = els.map((id, k) => `${elColor(id - 1)}55 ${k * 7}px,${elColor(id - 1)}55 ${(k + 1) * 7}px`).join(",");
+      style = `background:repeating-linear-gradient(45deg,${stops});`;
+    }
+    if (a > 0 && els.includes(a)) cls += " new";
+    if (!cs.length) cls += " zero";
+    return {
+      t: cs.length ? mn(sum, zt) : "·", cls, style,
+      attrs: ` data-p="${p}" data-q="${q}" data-els="${els.join(",")}" aria-label="K ${p},${q} = ${cs.length ? mn(sum, zt) : "0"} MN/m"`,
+    };
+  });
+  h += `<p class="note">Values in MN/m. ` + csvBtn("K", lab.map(dofLabel), lab.map(dofLabel), asmPartial(r, a), 1e6) + `</p>`;
+  if (a >= ne) {
+    h += `<h2>The complete system [K]{u} = {F}</h2>` + tex("[K]\\{u\\}=\\{F\\}", true);
+    h += `<p>Unknown displacements are marked <b>?</b>. Constrained DOFs have u = 0 but an unknown reaction <b>R</b>.</p>`;
+    h += `<div class="scroll"><table><tr><th>DOF</th><th>u</th><th>F (kN)</th></tr>` + lab.map((d) => {
+      const fixed = r.constrained[d - 1];
+      return `<tr><td class="l">${dofLabel(d)} <span class="chip ${fixed ? "fixed" : "free"}">${fixed ? "🔒" : "free"}</span></td>` +
+        `<td>${fixed ? "0" : "<b>?</b>"}</td><td>${fixed ? "<b>R?</b>" : fnum(toKN(r.F[d - 1]))}</td></tr>`;
+    }).join("") + `</table></div>`;
+    if (S.presetId === "logan-3-9") h += `<p class="note">Book notation: d1x, d1y, d1z are global DOFs 1, 2, 3 (node 1), d2x… are DOFs 4–6, and so on.</p>`;
+  }
+  return h;
+}
+function asmPartial(r, a) {
+  const n = r.nDof;
+  return Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => asmContrib(r, i + 1, j + 1, a).reduce((s, c) => s + c.value, 0)));
+}
+/* ---------------------------------------------------------------- Stages 5-7 */
+const isDefaultModel = () => JSON.stringify(S.model) === JSON.stringify(FEM.getPreset(S.presetId));
+const zeroTol = (arr, rel = 1e-9) => rel * Math.max(0, ...arr.map(Math.abs));
+const fz = (v, tol, sig = 4) => (Math.abs(v) <= tol ? "0" : fnum(v, sig));
+
+function supportKind(model, node) {
+  const s = model.supports.find((q) => q.node === node);
+  const f = s ? s.fix.slice(0, model.dim) : [];
+  if (f.length && f.every(Boolean)) return model.dim === 2 ? "pin" : "ball joint";
+  return "roller";
+}
+
+function renderStage5(r) {
+  const n = r.nDof, lab = Array.from({ length: n }, (_, i) => i + 1);
+  let h = `<div class="what"><p>The structure has to be held in place, otherwise it could just move away as a rigid body. A support sets some displacements to zero, ` +
+    `so those DOFs are no longer unknown. We delete their rows and columns from [K] (the <b>elimination method</b>). What is left, [K<sub>ff</sub>]{u<sub>f</sub>} = {F<sub>f</sub>}, ` +
+    `involves only the free DOFs. The deleted rows are not thrown away: they are used later to find the support reactions.</p></div>`;
+  h += `<h2>Constraints</h2><div class="scroll"><table><tr><th>DOF</th><th class="l">Reason</th></tr>` +
+    r.constraintList.map((c) => `<tr><td>${dofLabel(c.dof)}</td><td class="l">node ${c.node} is a ${supportKind(r.model, c.node)} → u<sub>${c.axis}</sub> = 0</td></tr>`).join("") + `</table></div>`;
+  h += tex("\\begin{bmatrix}K_{ff}&K_{fs}\\\\K_{sf}&K_{ss}\\end{bmatrix}\\begin{Bmatrix}u_f\\\\u_s\\end{Bmatrix}=\\begin{Bmatrix}F_f\\\\R_s\\end{Bmatrix},\\quad u_s=0\\;\\Rightarrow\\;K_{ff}\\,u_f=F_f", true);
+  h += `<h2>Global [K] with constrained DOFs</h2><div class="asmctl"><button class="btn" id="bc-toggle">${S.bcDone ? "Restore rows and columns" : "Eliminate constrained rows and columns"}</button></div>`;
+  const heads = lab.map(dofHead);
+  const maxK = r.K.reduce((m, row) => row.reduce((x, v) => Math.max(x, Math.abs(v)), m), 0), zt = 1e-12 * maxK;
+  h += matrixTable(heads, heads, (i, j) => {
+    const gone = r.constrained[i] || r.constrained[j];
+    return { t: mn(r.K[i][j], zt), cls: gone ? (S.bcDone ? "gone" : "cons") : "" };
+  });
+  h += `<p class="note">Greyed entries belong to constrained DOFs. Values in MN/m.</p>`;
+  if (!r.freeDofs.length) return h + `<p>Every DOF is constrained, so there is nothing to solve.</p>`;
+  const fh = r.freeDofs.map(dofHead);
+  h += `<h2>Reduced system [K<sub>ff</sub>]{u<sub>f</sub>} = {F<sub>f</sub>}</h2>`;
+  h += matrixTable(fh, fh, (i, j) => ({ t: mn(r.Kff[i][j], zt) }));
+  h += `<p class="note">Values in MN/m. ` + csvBtn("Kff", fh.map((q) => q.label), fh.map((q) => q.label), r.Kff, 1e6) + `</p>`;
+  h += `<div class="scroll"><table><tr><th>DOF</th><th>u<sub>f</sub></th><th>F<sub>f</sub> (kN)</th></tr>` +
+    r.freeDofs.map((d, i) => `<tr><td class="l">${dofLabel(d)}</td><td><b>?</b></td><td>${fnum(toKN(r.Ff[i]))}</td></tr>`).join("") + `</table></div>`;
+  h += `<p class="note">Displacements come from these free rows. Reactions come from the eliminated rows once u is known (Stage 7).</p>`;
+  return h;
+}
+
+/* --- Stage 6 ---------------------------------------------------------- */
+function stepMatrix(steps, idx) {
+  for (let i = idx; i >= 0; i--) if (steps[i].matrix) return steps[i].matrix;
+  return null;
+}
+function stepLine(step, r) {
+  const name = (i) => dofLabel(r.freeDofs[i]);
+  switch (step.type) {
+    case "start": return "Start with the augmented matrix [K<sub>ff</sub> | F<sub>f</sub>].";
+    case "pivot": return `Column ${step.col + 1}: the largest entry from row ${step.col + 1} downward is already on the diagonal, so the pivot is ${fnum(step.pivot / 1e6)}. No row swap needed.`;
+    case "swap": return `Column ${step.col + 1}: swap rows R${step.rowA + 1} and R${step.rowB + 1} so the largest entry (partial pivoting) becomes the pivot ${fnum(step.pivot / 1e6)}.`;
+    case "eliminate": return `R${step.row + 1} ← R${step.row + 1} − (${fnum(step.multiplier, 5)}) · R${step.pivotRow + 1}, which makes the entry in column ${step.col + 1} zero.`;
+    case "back": {
+      const terms = step.terms.map((t) => ` − (${fnum(t.coeff / 1e6)})(${fnum(t.xj * 1e3)})`).join("");
+      return `Back substitution, row ${step.row + 1}: ${name(step.row)} = (${fnum(step.rhs / 1e3)}${terms}) / ${fnum(step.diag / 1e6)} = <b>${fnum(step.value * 1e3, 5)} mm</b>`;
+    }
+    case "singular": return `Column ${step.col + 1}: no usable pivot (${step.pivot.toExponential(1)} is practically zero). The matrix is singular.`;
+  }
+  return "";
+}
+function augTable(M, r, step) {
+  const n = M.length;
+  const mx = Math.max(...M.map((row) => Math.max(...row.map(Math.abs))));
+  const zt = 1e-9 * mx;
+  const fh = r.freeDofs.map(dofHead);
+  const colH = fh.concat([{ label: "| F (kN)" }]);
+  const rowH = M.map((_, i) => ({ label: "R" + (i + 1) }));
+  return matrixTable(rowH, colH, (i, j) => {
+    const v = j === n ? M[i][j] / 1e3 : M[i][j] / 1e6;
+    let cls = j === n ? "augc" : "";
+    if (step) {
+      if (step.type === "pivot" && i === step.col && j === step.col) cls += " pv";
+      if (step.type === "swap" && (i === step.rowA || i === step.rowB)) cls += " rowhl";
+      if (step.type === "eliminate") {
+        if (i === step.row) cls += " rowhl";
+        if (i === step.pivotRow) cls += " pivrow";
+        if (i === step.row && j === step.col) cls += " pv";
+      }
+      if (step.type === "back" && i === step.row) cls += " rowhl";
+    }
+    return { t: fz(v, zt / (j === n ? 1e3 : 1e6)), cls };
+  });
+}
+function compareTextbook(r) {
+  if (S.presetId !== "logan-3-9") return "";
+  if (!isDefaultModel()) return `<p class="note">The textbook comparison is hidden because the inputs differ from the textbook problem.</p>`;
+  if (!r.u) return "";
+  const rows = [
+    ["L<sub>1</sub> (m)", r.elements[0].L, 13, 4], ["L<sub>2</sub> (m)", r.elements[1].L, 3, 4], ["L<sub>3</sub> (m)", r.elements[2].L, 10.05, 4],
+    ["K<sub>ff</sub> 1,1 (kN/m)", r.Kff[0][0] / 1e3, 69.519 * 210, 6], ["K<sub>ff</sub> 1,2 (kN/m)", r.Kff[0][1] / 1e3, 1.327 * 210, 5],
+    ["K<sub>ff</sub> 1,3 (kN/m)", r.Kff[0][2] / 1e3, -13.985 * 210, 5], ["K<sub>ff</sub> 2,2 (kN/m)", r.Kff[1][1] / 1e3, 83.879 * 210, 6],
+    ["K<sub>ff</sub> 2,3 (kN/m)", r.Kff[1][2] / 1e3, 40.885 * 210, 5], ["K<sub>ff</sub> 3,3 (kN/m)", r.Kff[2][2] / 1e3, 356.363 * 210, 6],
+    ["d<sub>1x</sub> (m)", r.u[0], 1.383e-3, 5], ["d<sub>1y</sub> (m)", r.u[1], -5.119e-5, 5], ["d<sub>1z</sub> (m)", r.u[2], 6.015e-5, 5],
+    ["σ<sub>1</sub> (MPa)", r.members[0].stress / 1e6, 20.51, 5], ["σ<sub>2</sub> (MPa)", r.members[1].stress / 1e6, 4.21, 5], ["σ<sub>3</sub> (MPa)", r.members[2].stress / 1e6, -5.29, 5],
+  ];
+  return `<h2>Compare with textbook (Logan Ex. 3.9)</h2><div class="scroll"><table><tr><th class="l">Quantity</th><th>This tool (exact)</th><th>Textbook (printed)</th><th>Difference</th></tr>` +
+    rows.map(([n, a, b, sg]) => `<tr><td class="l">${n}</td><td>${fnum(a, sg)}</td><td>${fnum(b, sg)}</td><td>${fix(((a - b) / Math.abs(b)) * 100, 2)} %</td></tr>`).join("") + `</table></div>` +
+    `<p class="note">The small gaps are the book's rounding, not errors here. The book rounds the direction-cosine products to 3 decimals before assembling, which shifts [K] by up to about 0.2% and d<sub>1y</sub> by about 0.7%. ` +
+    `The printed [λ]<sup>(3)</sup> also has a typo: row 2, column 1 reads 0.128, but symmetry requires 0.178 (see Stage 3, element 3).</p>`;
+}
+
+function renderStage6(r) {
+  const g = r.elimination;
+  let h = `<div class="what"><p>Now we solve [K<sub>ff</sub>]{u<sub>f</sub>} = {F<sub>f</sub>} for the unknown displacements by <b>Gaussian elimination</b>: ` +
+    `use each row to clear the entries below its ${gl("pivot", "pivot")} (forward elimination), then solve upward from the last row (back substitution). ` +
+    `Entries are shown in MN/m and kN, so the unknowns come out in mm.</p></div>`;
+  h += tex("[K_{ff}]\\{u_f\\}=\\{F_f\\}", true);
+  if (!g) return h + `<p>There are no free DOFs, so all displacements are zero.</p>`;
+  const steps = g.steps, n = r.freeDofs.length;
+  S.gStep = Math.max(0, Math.min(S.gStep, steps.length - 1));
+  h += `<div class="asmctl"><button class="btn" id="g-first"${S.gStep === 0 ? " disabled" : ""}>⟲ Restart</button><button class="btn" id="g-prev"${S.gStep === 0 ? " disabled" : ""}>← Previous step</button>` +
+    `<button class="btn" id="g-next"${S.gStep >= steps.length - 1 ? " disabled" : ""}>Next step →</button>` +
+    `<label class="inline"><input type="checkbox" id="g-all"${S.showAllSteps ? " checked" : ""}> Show all steps</label><span class="note">Step ${S.gStep + 1} of ${steps.length}</span></div>`;
+  if (S.showAllSteps) {
+    const lastOfCol = new Set();
+    steps.forEach((s, i) => { if (s.type === "eliminate" && !(steps[i + 1] && steps[i + 1].type === "eliminate" && steps[i + 1].col === s.col)) lastOfCol.add(i); });
+    h += `<ol class="steps">` + steps.map((s, i) => {
+      const showM = s.matrix && (n <= 6 || s.type === "start" || lastOfCol.has(i) || s.type === "singular");
+      return `<li>${stepLine(s, r)}${showM ? augTable(s.matrix, r, s) : ""}</li>`;
+    }).join("") + `</ol>`;
+  } else {
+    const s = steps[S.gStep], M = stepMatrix(steps, S.gStep);
+    h += `<p class="stepline">${stepLine(s, r)}</p>` + (M ? augTable(M, r, s) : "");
+  }
+  if (r.state === "singular") h += `<div class="banner" role="alert">${esc(r.message)}</div>`;
+  if (r.u) {
+    h += `<h2>Displacements</h2><div class="scroll"><table><tr><th>DOF</th><th class="l">Node, direction</th><th>u (mm)</th><th class="l">Status</th></tr>` +
+      Array.from({ length: r.nDof }, (_, i) => i + 1).map((d) => {
+        const fixed = r.constrained[d - 1];
+        return `<tr><td>${dofLabel(d)}</td><td class="l">node ${S.model.nodes[Math.floor((d - 1) / r.dim)].id}, ${AXES[(d - 1) % r.dim]}</td>` +
+          `<td>${fixed ? "0" : fnum(r.u[d - 1] * 1e3, 5)}</td><td class="l"><span class="chip ${fixed ? "fixed" : "free"}">${fixed ? "🔒 fixed" : "free"}</span></td></tr>`;
+      }).join("") + `</table></div>`;
+    h += `<p class="note">The dashed outline in the diagram is the original shape. The solid shape is the deformed one, magnified (use the slider under the diagram).</p>`;
+  }
+  return h + compareTextbook(r);
+}
+
+/* --- Stage 7 ---------------------------------------------------------- */
+const badge = (st) => st === "tension" ? `<span class="badge tension">▲ Tension</span>` : st === "compression" ? `<span class="badge compression">▼ Compression</span>` : `<span class="badge zero">● Zero-force</span>`;
+function renderStage7(r) {
+  let h = `<div class="what"><p>With the displacements known we recover everything else. The <b>${gl("reactions", "reaction")}</b> are the forces the supports must supply: R = [K]{u} − {F}, evaluated on the constrained rows. ` +
+    `Each bar's <b>stress</b> follows from how much it stretched: elongation δ → strain ε = δ/L → stress σ = Eε → force N = σA. Positive means ${gl("tension", "tension")}, negative ${gl("compression", "compression")}.</p></div>`;
+  if (!r.u) return h + `<div class="banner" role="alert">${esc(r.message)}</div><p>There are no results to show because the structure is a mechanism.</p>`;
+  const rtol = zeroTol(r.R);
+  h += tex("\\{R\\}=[K]\\{u\\}-\\{F\\}", true);
+  h += `<h2>Reactions, row by row</h2>` + r.reactionRows.map((q) => {
+    const terms = q.terms.map((t) => `(${fnum(t.k / 1e6)})(${fnum(t.u * 1e3)})`).join(" + ") || "0";
+    return `<details><summary>R<sub>${dofLabel(q.dof)}</sub> = ${fz(q.R / 1e3, rtol / 1e3)} kN</summary>` +
+      `<p>R = Σ K<sub>${q.dof},j</sub> u<sub>j</sub> − F = ${terms} − (${fnum(q.F / 1e3)}) = ${fnum(q.Ku / 1e3)} − (${fnum(q.F / 1e3)}) kN</p></details>`;
+  }).join("");
+  const axes = AXES.slice(0, r.dim);
+  h += `<h2>Reactions</h2><div class="scroll"><table><tr><th>Node</th>${axes.map((a) => `<th>R<sub>${a}</sub> (kN)</th>`).join("")}</tr>` +
+    r.model.nodes.map((nd, i) => ({ nd, i })).filter(({ i }) => axes.some((_, a) => r.constrained[r.dim * i + a])).map(({ nd, i }) =>
+      `<tr><td>${nd.id}</td>${axes.map((_, a) => r.constrained[r.dim * i + a] ? `<td>${fz(r.R[r.dim * i + a] / 1e3, rtol / 1e3)}</td>` : `<td class="muted">—</td>`).join("")}</tr>`).join("") + `</table></div>`;
+  const eq = r.equilibrium;
+  h += `<h2>${gl("Equilibrium", "equilibrium")} check</h2><div class="scroll"><table><tr><th class="l">Direction</th><th>ΣF applied (kN)</th><th>ΣR reactions (kN)</th><th>Sum (kN)</th><th></th></tr>` +
+    axes.map((a, d) => `<tr><td class="l">${a}</td><td>${fz(eq.sumF[d] / 1e3, 1e-9)}</td><td>${fz(eq.sumR[d] / 1e3, 1e-9)}</td><td>${fz(eq.total[d] / 1e3, 1e-9)}</td>` +
+      `<td class="${Math.abs(eq.total[d]) < 1e-9 * Math.max(1, Math.abs(eq.sumF[d])) ? "ok" : "bad"}">✓ ≈ 0</td></tr>`).join("") + `</table></div>`;
+  h += `<h2>Element strain, stress and force</h2>` +
+    tex("\\delta=\\begin{bmatrix}-C_x&-C_y&-C_z&C_x&C_y&C_z\\end{bmatrix}\\{d\\}^{(e)},\\quad \\varepsilon=\\frac{\\delta}{L},\\quad \\sigma=E\\varepsilon,\\quad N=\\sigma A", true);
+  h += `<div class="scroll"><table><tr><th>Element</th><th class="l">d<sup>(e)</sup> (mm)</th><th>δ (mm)</th><th>ε</th><th>σ (MPa)</th><th>N (kN)</th><th class="l">State</th></tr>` +
+    r.members.map((m) => `<tr data-el="${m.id}"><td>${m.id}</td><td class="l">[${m.d.map((v) => fz(v * 1e3, 1e-12 * 1e3, 4)).join(", ")}]</td><td>${fz(m.delta * 1e3, 1e-9, 4)}</td>` +
+      `<td>${m.state === "zero" ? "0" : fnum(m.strain, 4)}</td><td>${m.state === "zero" ? "0" : fnum(m.stress / 1e6, 5)}</td><td>${m.state === "zero" ? "0" : fnum(m.N / 1e3, 5)}</td><td class="l">${badge(m.state)}</td></tr>`).join("") + `</table></div>`;
+  const s = r.summary;
+  h += `<div class="summary"><h2>Summary</h2><ul>` +
+    `<li>Largest displacement: <b>${fnum(s.maxDisp.value * 1e3, 4)} mm</b> at node ${s.maxDisp.node}</li>` +
+    `<li>Largest tensile stress: ${s.maxTension ? `<b>${fnum(s.maxTension.stress / 1e6, 5)} MPa</b> in element ${s.maxTension.element}` : "none"}</li>` +
+    `<li>Largest compressive stress: ${s.maxCompression ? `<b>${fnum(s.maxCompression.stress / 1e6, 5)} MPa</b> in element ${s.maxCompression.element}` : "none"}</li></ul>` +
+    `<p class="note">Diagram: blue solid = tension, red dashed = compression, grey dotted = zero-force; thickness grows with |N|. Green arrows are reactions.</p></div>`;
+  return h + compareTextbook(r);
+}
+
+function autoScale(r) {
+  const nd = r.model.nodes, ext = ["x", "y", "z"].slice(0, r.dim).map((k) => Math.max(...nd.map((n) => n[k])) - Math.min(...nd.map((n) => n[k])));
+  const size = Math.max(...ext), md = r.summary ? r.summary.maxDisp.value : 0;
+  return md > 0 ? (0.1 * size) / md : 1;
+}
+function scaleFactor() { return autoScale(S.result) * Math.pow(10, (S.scaleV - 100) / 100); }
+function scaleLabel() { return `Magnification ×${fnum(scaleFactor(), 3)} (auto ×${fnum(autoScale(S.result), 3)})`; }
+
+
+/* ---------------------------------------------------------------- Check yourself */
+function checkYourself(stage, r) {
+  const sel = r.elements.find((e) => e.id === S.selEl) || r.elements[0];
+  let q, a;
+  const nm = (d) => dofLabel(d);
+  if (stage === 1) {
+    q = "How many DOFs are free and how many are constrained?";
+    a = `${r.counts.free} free and ${r.counts.constrained} constrained (${r.counts.total} total = ${r.dim} DOFs × ${r.nNodes} nodes).`;
+  } else if (stage === 2) {
+    q = `What is C<sub>x</sub> of element ${sel.id}?`;
+    a = `C<sub>x</sub> = Δx / L = ${fix(sel.dx, 3)} / ${fix(sel.L, 4)} = <b>${fix(sel.cx, 4)}</b>`;
+  } else if (stage === 3) {
+    const e3 = Math.abs(sel.cx * sel.cy) > 1e-9 ? sel : r.elements.find((e) => Math.abs(e.cx * e.cy) > 1e-9) || sel;
+    q = `What is k<sub>12</sub> of element ${e3.id} in MN/m (row 1, column 2 of its global [k])?`;
+    a = `k<sub>12</sub> = (EA/L) · C<sub>x</sub> · C<sub>y</sub> = ${mn(e3.EAoverL)} × (${fix(e3.cx, 4)} × ${fix(e3.cy, 4)}) = <b>${mn(e3.kGlobal[0][1], 1e-12 * e3.EAoverL)} MN/m</b>`;
+  } else if (stage === 4) {
+    let pq = [1, 1];
+    outer: for (let p = 1; p <= r.nDof; p++) for (let qd = p; qd <= r.nDof; qd++) if (r.contributions[p - 1][qd - 1].length > 1) { pq = [p, qd]; break outer; }
+    const cs = r.contributions[pq[0] - 1][pq[1] - 1], sum = cs.reduce((t, c) => t + c.value, 0);
+    q = `Which elements add into K<sub>${pq[0]},${pq[1]}</sub> (${nm(pq[0])} with ${nm(pq[1])}), and what is its value in MN/m?`;
+    a = `Elements ${cs.map((c) => c.element).join(", ")}: ${cs.map((c) => mn(c.value)).join(" + ")} = <b>${mn(sum)} MN/m</b>`;
+  } else if (stage === 5) {
+    q = "How big is [K<sub>ff</sub>], and which DOFs were removed?";
+    a = `${r.counts.free} × ${r.counts.free}. Removed: ${r.fixedDofs.map(nm).join(", ")}.`;
+  } else if (stage === 6) {
+    if (!r.u) return "";
+    let best = r.freeDofs[0];
+    r.freeDofs.forEach((d) => { if (Math.abs(r.u[d - 1]) > Math.abs(r.u[best - 1])) best = d; });
+    q = "Which DOF has the largest displacement, and how large is it in mm?";
+    a = `${nm(best)}: <b>${fnum(r.u[best - 1] * 1e3, 5)} mm</b>`;
+  } else {
+    if (!r.u) return "";
+    const c = r.summary.maxCompression;
+    q = "Which element carries the largest compressive stress, and what is it?";
+    a = c ? `Element ${c.element}: <b>${fnum(c.stress / 1e6, 5)} MPa</b>` : "No element is in compression.";
+  }
+  return `<details class="check"><summary>Check yourself</summary><p>${q}</p><button class="btn small" data-reveal>Reveal answer</button><p class="answer" hidden>${a}</p></details>`;
+}
+
+/* ---------------------------------------------------------------- Guided demo */
+function demoPrompt(stage, r) {
+  const f = (v, d) => fnum(v, d);
+  const P = [null,
+    `Textbook problem (Logan Example 3.9): three bars meet at node 1, which carries ${f(toKN(r.F[0]))} kN in +x. Nodes 2, 3 and 4 are pinned. Note the DOF counts: ${r.counts.total} total, ${r.counts.constrained} constrained, ${r.counts.free} free.`,
+    `Compare the lengths (${r.elements.map((e) => fix(e.L, 3)).join(", ")} m) and the cosines with the book: (−12/13, 3/13, 4/13), (0, 0, −1) and (2, 9, 4)/10.05.`,
+    `Pick Element 3 and compare [λ] with the book. The book prints 0.128 in row 2, column 1, but symmetry requires 0.178, as shown here.`,
+    `Add the elements one at a time. Hover K for d1x with d1x: all three bars contribute, so that cell is striped.`,
+    `Nodes 2, 3 and 4 are pinned, which removes ${r.counts.constrained} DOFs. What remains is the 3 × 3 block for d1x, d1y and d1z, to compare with 210 × (69.519, 1.327, −13.985; …).`,
+    r.u ? `Step through the elimination. The solution is d1x = ${f(r.u[0] * 1e3, 5)} mm, d1y = ${f(r.u[1] * 1e3, 5)} mm, d1z = ${f(r.u[2] * 1e3, 5)} mm. Scroll down for the textbook comparison.` : "The system is singular; fix the inputs.",
+    r.u ? `Stresses: ${r.members.map((m, i) => `σ${i + 1} = ${f(m.stress / 1e6, 5)} MPa (${m.state})`).join(", ")}. Check that the reactions balance the 20 kN load.` : "No results while the system is singular.",
+  ];
+  return P[stage];
+}
+function demoBanner(r) {
+  if (!S.demo) return "";
+  return `<div class="demo" role="note"><b>Guided demo, stage ${S.stage} of 7.</b> ${demoPrompt(S.stage, r)} <button class="btn small" id="demo-exit">Exit demo</button></div>`;
+}
+function startDemo() {
+  loadPreset("logan-3-9"); S.demo = true; renderSide();
+  if (location.hash !== "#stage-1") location.hash = "stage-1"; else { S.stage = 1; renderMain(); }
+  document.getElementById("content").focus();
+}
+
+/* ---------------------------------------------------------------- Print / export */
+const STAGE_FNS = () => [null, renderStage1, renderStage2, renderStage3, renderStage4, renderStage5, renderStage6, renderStage7];
+function buildPrint() {
+  const r = S.result, save = { stage: S.stage, asm: S.asm, all: S.showAllSteps, sel: S.selEl, bc: S.bcDone };
+  S.asm = r.elements.length; S.showAllSteps = true; S.bcDone = true;
+  let h = `<h1>FEM truss solution: ${esc(r.model.title)}</h1><p>${esc(r.model.description)}</p>`;
+  try {
+    for (let st = 1; st <= 7; st++) {
+      S.stage = st;
+      const body = STAGE_FNS()[st];
+      let inner;
+      if (st === 3) inner = r.elements.map((e, i) => { S.selEl = e.id; const t = body(r); return `<h2>Element ${e.id}</h2>` + (i ? t.replace(/<div class="what">[\s\S]*?<\/div>/, "") : t); }).join("");
+      else inner = body(r);
+      S.selEl = save.sel;
+      h += `<section><h2>Stage ${st}: ${esc(STAGES[st - 1].title)}</h2>${renderDiagram(r, diagramOpts())}${inner}</section>`;
+    }
+  } finally { Object.assign(S, { stage: save.stage, asm: save.asm, showAllSteps: save.all, selEl: save.sel, bcDone: save.bc }); }
+  document.getElementById("printview").innerHTML = h;
+}
+function printSolution() {
+  buildPrint();
+  const clear = () => { document.getElementById("printview").innerHTML = ""; window.removeEventListener("afterprint", clear); };
+  window.addEventListener("afterprint", clear);
+  window.print();
+}
+
+/* ---------------------------------------------------------------- Theme */
+const THEMES = ["auto", "light", "dark"];
+function applyTheme(t) {
+  if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
+  const b = document.getElementById("theme-btn");
+  if (b) b.textContent = "Theme: " + t[0].toUpperCase() + t.slice(1);
+}
+function loadTheme() { try { const t = localStorage.getItem("fem-theme"); return THEMES.includes(t) ? t : "auto"; } catch (e) { return "auto"; } }
+function cycleTheme() {
+  const cur = document.documentElement.getAttribute("data-theme") || "auto";
+  const next = THEMES[(THEMES.indexOf(cur) + 1) % 3];
+  applyTheme(next);
+  try { localStorage.setItem("fem-theme", next); } catch (e) { /* storage unavailable */ }
+}
+
+function renderPlaceholder(i) {
+  return `<div class="what"><p>${esc(STAGES[i - 1].title)} is built in a later phase of the tutor.</p></div>`;
+}
+
+/* ============================================================== ui */
+const S = { presetId: FEM.DEFAULT_PRESET_ID, model: null, result: null, stage: 1, showDofs: true, selEl: 1, asm: 0, symbolic: false, view: { ...VIEWS.reset }, bcDone: false, gStep: 0, showAllSteps: false, scaleV: 100, demo: false };
+
+function loadPreset(id) {
+  S.presetId = id;
+  S.model = FEM.getPreset(id);
+  S.result = FEM.solve(S.model);
+  S.selEl = 1; S.asm = 0; S.view = { ...VIEWS.reset }; S.bcDone = false; S.gStep = 0; S.showAllSteps = false; S.scaleV = 100;
+}
+function resolve() { S.result = FEM.solve(S.model); }
+
+function renderSide() {
+  const m = S.model, dim = m.dim;
+  let h = `<h2>Problem</h2><label for="preset">Preset</label><select id="preset">` +
+    FEM.PRESETS.map((p) => `<option value="${p.id}"${p.id === S.presetId ? " selected" : ""}>${esc(p.title)}</option>`).join("") + `</select>`;
+  h += `<h2 style="margin-top:1rem">Bar properties</h2>`;
+  m.elements.forEach((e, i) => {
+    h += `<div class="elbox" data-el="${e.id}"><b>Element ${e.id}</b> <span class="note">(${e.n1}→${e.n2})</span><div class="rowfield">` +
+      `<div><label for="E${i}">E (GPa)</label><input type="number" step="any" id="E${i}" data-kind="E" data-i="${i}" value="${clean(toGPa(e.E))}"><div class="err" id="errE${i}"></div></div>` +
+      `<div><label for="A${i}">A (mm²)</label><input type="number" step="any" id="A${i}" data-kind="A" data-i="${i}" value="${clean(toMM2(e.A))}"><div class="err" id="errA${i}"></div></div></div></div>`;
+  });
+  h += `<h2 style="margin-top:1rem">Loads (kN)</h2>`;
+  m.loads.forEach((l, i) => {
+    h += `<div class="elbox"><b>Node ${l.node}</b><div class="rowfield" style="grid-template-columns:repeat(${dim},1fr)">` +
+      AXES.slice(0, dim).map((a, d) => `<div><label for="F${i}_${d}">F${a}</label><input type="number" step="any" id="F${i}_${d}" data-kind="F" data-i="${i}" data-d="${d}" value="${clean(toKN(l.F[d]))}"><div class="err" id="errF${i}_${d}"></div></div>`).join("") +
+      `</div></div>`;
+  });
+  h += `<p><button class="btn" id="reset">Reset preset</button></p>` +
+    `<label><input type="checkbox" id="dofs"${S.showDofs ? " checked" : ""}> Show DOF arrows</label>`;
+  document.getElementById("side").innerHTML = h;
+}
+
+function diagramOpts() {
+  const r = S.result, o = { showDofs: S.showDofs && S.stage <= 5, view: S.view };
+  if (S.stage === 6 && r.u) o.deform = { scale: scaleFactor() };
+  if (S.stage === 7 && r.u) { o.memberState = true; o.reactions = true; }
+  if (S.stage === 2 || S.stage === 3) o.sel = S.selEl;
+  if (S.stage === 2) o.localAxis = S.selEl;
+  if (S.stage === 4) {
+    o.colorByElement = {};
+    r.elements.forEach((e, i) => { if (i < S.asm) o.colorByElement[e.id] = elColor(i); });
+    if (S.asm === 0) o.colorByElement = null;
+  }
+  return o;
+}
+function drawDiagram() {
+  const w = document.getElementById("svgwrap");
+  if (w) w.innerHTML = renderDiagram(S.result, diagramOpts());
+}
+
+function renderMain() {
+  const r = S.result;
+  document.getElementById("title-sub").textContent = "— " + r.model.title;
+  document.getElementById("banner").innerHTML = (r.state === "singular"
+    ? `<div class="banner" role="alert"><b>Singular system.</b> ${esc(r.message)}</div>` : "") + demoBanner(r);
+  document.getElementById("diagram").innerHTML =
+    `<h2>${esc(r.model.title)}</h2>` +
+    (r.dim === 3 ? `<div class="viewbtns"><button class="btn small" data-view="reset">Reset view</button><button class="btn small" data-view="iso">Isometric</button>` +
+      `<button class="btn small" data-view="front">Front</button><button class="btn small" data-view="top">Top</button><span class="note">Drag to rotate</span></div>` : "") +
+    `<div id="svgwrap" class="svgwrap${r.dim === 3 ? " rot" : ""}"></div>` +
+    (S.stage === 6 && r.u ? `<div class="scalectl"><label for="scale" id="scalelbl">${scaleLabel()}</label><input type="range" id="scale" min="0" max="200" value="${S.scaleV}"> <button class="btn small" id="scale-auto">Auto</button></div>` : "");
+  drawDiagram();
+  const st = STAGES[S.stage - 1];
+  const body = [null, renderStage1, renderStage2, renderStage3, renderStage4, renderStage5, renderStage6, renderStage7][S.stage];
+  document.getElementById("content").innerHTML =
+    `<h2>Stage ${S.stage}: ${esc(st.title)}</h2>` + (body ? body(r) : renderPlaceholder(S.stage)) + checkYourself(S.stage, r);
+  document.getElementById("bar").style.width = (S.stage / 7) * 100 + "%";
+  document.querySelectorAll("#stepper .step").forEach((b) => {
+    if (+b.dataset.stage === S.stage) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+  });
+  document.getElementById("prev").disabled = S.stage === 1;
+  document.getElementById("next").disabled = S.stage === 7;
+}
+
+function renderStepper() {
+  document.getElementById("stepper").innerHTML =
+    STAGES.map((s, i) => `<button class="step" data-stage="${i + 1}">${i + 1}. ${esc(s.name)}</button>`).join("") +
+    `<span class="navbtns"><button class="btn" id="prev">← Previous</button><button class="btn" id="next">Next →</button></span>`;
+}
+
+function goStage(n) {
+  n = Math.max(1, Math.min(7, n));
+  if (location.hash !== "#stage-" + n) location.hash = "stage-" + n; // hashchange re-renders
+  else if (S.stage !== n) { S.stage = n; renderMain(); }
+}
+function stageFromHash() {
+  const m = /^#stage-([1-7])$/.exec(location.hash);
+  return m ? +m[1] : 1;
+}
+
+function validate(kind, raw) {
+  if (raw.trim() === "") return { err: "Enter a number." };
+  const v = Number(raw);
+  if (!isFinite(v)) return { err: "Not a valid number." };
+  if (kind === "E" && (v < 1 || v > 1000)) return { err: "E must be between 1 and 1000 GPa." };
+  if (kind === "A" && (v < 1 || v > 100000)) return { err: "A must be between 1 and 100 000 mm²." };
+  return { v };
+}
+function onEdit(input) {
+  const kind = input.dataset.kind, i = +input.dataset.i, d = input.dataset.d;
+  const errEl = document.getElementById("err" + kind + i + (d !== undefined ? "_" + d : ""));
+  const res = validate(kind, input.value);
+  if (res.err) {
+    input.setAttribute("aria-invalid", "true");
+    errEl.textContent = res.err + " Using last valid value.";
+    return;
+  }
+  input.removeAttribute("aria-invalid");
+  errEl.textContent = "";
+  if (kind === "E") S.model.elements[i].E = res.v * 1e9;
+  else if (kind === "A") S.model.elements[i].A = res.v * 1e-6;
+  else S.model.loads[i].F[+d] = res.v * 1e3;
+  resolve();
+  renderMain();
+}
+
+/* hover: highlight a list of element ids everywhere */
+function setHover(ids, on) {
+  ids.forEach((id) => document.querySelectorAll(`[data-el="${id}"]`).forEach((n) => {
+    n.classList.toggle(n.tagName === "TR" || n.classList.contains("elbox") ? "hl-row" : "hl", on);
+  }));
+}
+let hoverIds = [];
+function hoverTargets(t) {
+  const c = t.closest("[data-els]");
+  if (c) return c.dataset.els ? c.dataset.els.split(",") : [];
+  const e = t.closest("[data-el]");
+  return e ? [e.dataset.el] : [];
+}
+
+function cellTip(td) {
+  const r = S.result, p = +td.dataset.p, q = +td.dataset.q;
+  const cs = asmContrib(r, p, q, S.asm);
+  const name = p < 10 && q < 10 ? `K${sub(p)}${sub(q)}` : `K${sub(p)},${sub(q)}`;
+  const maxK = r.K.reduce((m, row) => row.reduce((x, v) => Math.max(x, Math.abs(v)), m), 0), zt = 1e-12 * maxK;
+  let h;
+  if (!cs.length) {
+    h = `<b>${name} = 0</b><br>${S.asm === 0 ? "nothing assembled yet" : "no element added so far couples these two DOFs"}`;
+  } else {
+    const sum = cs.reduce((s, c) => s + c.value, 0);
+    h = `<b>${name} = ${cs.map((c) => `k${sup("(" + c.element + ")")}${sub(c.a)}${sub(c.b)}`).join(" + ")}</b><br>` +
+      `= ${cs.map((c) => `${mn(c.value, zt)} (e${c.element})`).join(" + ")} = <b>${mn(sum, zt)} MN/m</b>`;
+  }
+  return h + `<br><span class="tipsub">couples ${dofLabel(p)} with ${dofLabel(q)}</span>`;
+}
+function showTip(td, ev) {
+  const tip = document.getElementById("tip");
+  tip.innerHTML = cellTip(td);
+  tip.hidden = false;
+  const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8), y = Math.min(ev.clientY + 16, innerHeight - tip.offsetHeight - 8);
+  tip.style.left = Math.max(4, x) + "px"; tip.style.top = Math.max(4, y) + "px";
+}
+
+function init() {
+  applyTheme(loadTheme());
+  renderStepper();
+  loadPreset(FEM.DEFAULT_PRESET_ID);
+  S.stage = stageFromHash();
+  renderSide();
+  renderMain();
+
+  document.addEventListener("click", (e) => {
+    const t = e.target;
+    const step = t.closest(".step");
+    if (step) return goStage(+step.dataset.stage);
+    if (t.id === "prev") return goStage(S.stage - 1);
+    if (t.id === "next") return goStage(S.stage + 1);
+    if (t.id === "reset") { loadPreset(S.presetId); renderSide(); renderMain(); return; }
+    if (t.id === "asm-next") { S.asm = Math.min(S.asm + 1, S.result.elements.length); return renderMain(); }
+    if (t.id === "asm-all") { S.asm = S.result.elements.length; return renderMain(); }
+    if (t.id === "asm-reset") { S.asm = 0; return renderMain(); }
+    if (t.id === "theme-btn") return cycleTheme();
+    if (t.id === "help-btn") return document.getElementById("help").showModal();
+    if (t.id === "help-close") return document.getElementById("help").close();
+    if (t.id === "demo-btn") return startDemo();
+    if (t.id === "demo-exit") { S.demo = false; return renderMain(); }
+    if (t.id === "print-btn") return printSolution();
+    const rv = t.closest("[data-reveal]");
+    if (rv) { const ans = rv.nextElementSibling; ans.hidden = !ans.hidden; rv.textContent = ans.hidden ? "Reveal answer" : "Hide answer"; return; }
+    if (t.id === "bc-toggle") { S.bcDone = !S.bcDone; return renderMain(); }
+    if (t.id === "g-first") { S.gStep = 0; return renderMain(); }
+    if (t.id === "g-prev") { S.gStep = Math.max(0, S.gStep - 1); return renderMain(); }
+    if (t.id === "g-next") { S.gStep++; return renderMain(); }
+    if (t.id === "scale-auto") { S.scaleV = 100; return renderMain(); }
+    const cp = t.closest("[data-copy]");
+    if (cp) return copyCSV(cp.dataset.copy, cp);
+    const vw = t.closest("[data-view]");
+    if (vw) { S.view = { ...VIEWS[vw.dataset.view] }; return drawDiagram(); }
+    const sel = t.closest("[data-sel]");
+    if (sel) { S.selEl = +sel.dataset.sel; renderMain(); }
+  });
+  document.addEventListener("change", (e) => {
+    const t = e.target;
+    if (t.id === "preset") { loadPreset(t.value); renderSide(); renderMain(); }
+    else if (t.id === "dofs") { S.showDofs = t.checked; drawDiagram(); }
+    else if (t.id === "symbolic") { S.symbolic = t.checked; renderMain(); }
+    else if (t.id === "g-all") { S.showAllSteps = t.checked; renderMain(); }
+    else if (t.dataset && t.dataset.kind) onEdit(t);
+  });
+  document.addEventListener("input", (e) => {
+    if (e.target.id !== "scale") return;
+    S.scaleV = +e.target.value;
+    document.getElementById("scalelbl").textContent = scaleLabel();
+    drawDiagram();
+  });
+  document.addEventListener("mouseover", (e) => {
+    const td = e.target.closest("td[data-p]");
+    if (td) showTip(td, e);
+    hoverIds = hoverTargets(e.target);
+    setHover(hoverIds, true);
+  });
+  document.addEventListener("mousemove", (e) => {
+    const td = e.target.closest("td[data-p]");
+    if (td) showTip(td, e);
+  });
+  document.addEventListener("mouseout", () => {
+    setHover(hoverIds, false); hoverIds = [];
+    document.getElementById("tip").hidden = true;
+  });
+  window.addEventListener("hashchange", () => { S.stage = stageFromHash(); renderMain(); });
+  document.addEventListener("keydown", (e) => {
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === "ArrowLeft") goStage(S.stage - 1);
+    else if (e.key === "ArrowRight") goStage(S.stage + 1);
+  });
+
+  // drag to rotate the 3D view
+  const dg = document.getElementById("diagram");
+  let drag = null, raf = 0;
+  dg.addEventListener("pointerdown", (e) => {
+    if (S.result.dim !== 3 || !e.target.closest("#svgwrap")) return;
+    drag = { x: e.clientX, y: e.clientY };
+    dg.setPointerCapture(e.pointerId);
+    document.getElementById("svgwrap").classList.add("drag");
+  });
+  dg.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    S.view.yaw += (e.clientX - drag.x) * 0.5;
+    S.view.pitch = Math.max(-90, Math.min(90, S.view.pitch + (e.clientY - drag.y) * 0.5));
+    drag = { x: e.clientX, y: e.clientY };
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; drawDiagram(); });
+  });
+  const end = () => { drag = null; const w = document.getElementById("svgwrap"); if (w) w.classList.remove("drag"); };
+  dg.addEventListener("pointerup", end);
+  dg.addEventListener("pointercancel", end);
+
+  // KaTeX loads with `defer`, i.e. after this script: re-render once it is available
+  window.addEventListener("load", () => { if (window.katex) renderMain(); });
+}
+init();
+</script>
+</body>
+</html>
